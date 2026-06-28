@@ -50,6 +50,100 @@ def _demo_badge() -> Dict[str, Any]:
     }
 
 
+def _update_inventory_canvas(client, channel_id: str, thread_ts: str, updated_reagent: str):
+    """
+    Update the LabOps inventory display.
+    First tries Slack Canvas API, falls back to rich Block Kit message.
+    """
+    items = db.get_inventory()
+
+    # Try real Canvas API
+    try:
+        lines = ["# 📋 LabOps Inventario\n"]
+        lines.append("| Reactivo | Stock | Crítico | Días restantes |")
+        lines.append("|----------|-------|---------|----------------|")
+        for item in items:
+            r = item["reagent_name"]
+            stock = item["current_stock"]
+            crit = item.get("criticality", "medium")
+            lead = item.get("reorder_lead_time_days", 7)
+            try:
+                proj = prediction.calculate_stockout_projection(r, stock, lead)
+                days = proj.get("projected_stockout_days", "N/A")
+            except Exception:
+                days = "N/A"
+            marker = " 🆕" if r == updated_reagent else ""
+            lines.append(f"| {r}{marker} | {stock} | {crit} | {days} |")
+        lines.append("\n_Last update: just now_")
+        markdown_content = "\n".join(lines)
+
+        result = client.api_call(
+            "canvases.create",
+            json={
+                "title": "LabOps Inventario",
+                "document_content": {
+                    "type": "markdown",
+                    "markdown_value": markdown_content,
+                },
+            },
+        )
+        if result.get("ok"):
+            canvas_url = result.get("canvas", {}).get("url", "")
+            client.chat_postMessage(
+                channel=channel_id,
+                thread_ts=thread_ts,
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": (
+                                f":page_facing_up: *Canvas de inventario actualizado*\n"
+                                f"Reactivo `{updated_reagent}` incluido.\n"
+                                f"<{canvas_url}|Ver Canvas completo>"
+                            ),
+                        },
+                    },
+                    _demo_badge(),
+                ],
+                text="Canvas de inventario actualizado",
+            )
+            return
+    except Exception:
+        pass  # Fall through to Block Kit fallback
+
+    # Fallback: rich Block Kit inventory update
+    block_rows = []
+    for item in items:
+        r = item["reagent_name"]
+        stock = item["current_stock"]
+        crit = item.get("criticality", "medium")
+        lead = item.get("reorder_lead_time_days", 7)
+        try:
+            proj = prediction.calculate_stockout_projection(r, stock, lead)
+            days = proj.get("projected_stockout_days", "N/A")
+            sev = proj.get("severity", "unknown")
+            emoji = "🔴" if sev == "critical" else "🟡" if sev == "warning" else "🟢"
+        except Exception:
+            days = "N/A"
+            emoji = "⚪"
+        block_rows.append(f"{emoji} *{r}* — {stock} u. | {days} días | {crit}")
+
+    client.chat_postMessage(
+        channel=channel_id,
+        thread_ts=thread_ts,
+        blocks=[
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "📋 LabOps Inventario"},
+            },
+            {"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(block_rows)}},
+            _demo_badge(),
+        ],
+        text="Inventario actualizado",
+    )
+
+
 # ---------------------------------------------------------------------------
 # HANDLER 1 — Scheduled alert (called every hour or via /alert/trigger)
 # ---------------------------------------------------------------------------
@@ -318,30 +412,8 @@ def handle_order_submission(ack, body, client):
         text=f"Orden creada: {reagent} x{quantity}",
     )
 
-    # Update Canvas (prepared payload)
-    canvas_resp = mcp.update_canvas(meta["channel"], {
-        "reagent_name": reagent,
-        "current_stock": order.get("current_stock", "N/A"),
-        "last_order_status": "pending",
-    })
-    client.chat_postMessage(
-        channel=meta["channel"],
-        thread_ts=meta["thread_ts"],
-        blocks=[
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": (
-                        f":page_facing_up: *Canvas actualizado*\n"
-                        f"Inventario de `{reagent}` actualizado con nueva orden."
-                    ),
-                },
-            },
-            _demo_badge(),
-        ],
-        text="Canvas actualizado",
-    )
+    # Update Canvas (real API + Block Kit fallback)
+    _update_inventory_canvas(client, meta["channel"], meta["thread_ts"], reagent)
 
 
 # ---------------------------------------------------------------------------
