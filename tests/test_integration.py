@@ -61,18 +61,53 @@ class TestViewForecast(unittest.TestCase):
 
         handle_view_forecast(ack, body, client)
 
-        # Should post forecast table with embedded chart image
+        # Should post forecast with NATIVE Block Kit fields (no ASCII tables)
         calls = client.chat_postMessage.call_args_list
         self.assertTrue(any("Pronóstico" in str(c) for c in calls))
         forecast_call = [c for c in calls if "Pronóstico" in str(c)][0]
         blocks = forecast_call[1]["blocks"]
-        self.assertTrue(any(b.get("type") == "image" for b in blocks))
+        # Native fields present
+        self.assertTrue(any(b.get("type") == "section" and "fields" in b for b in blocks))
+        # No raw ASCII code-block table in the forecast section text
+        self.assertFalse(any("```" in str(b) for b in blocks))
+        # With no public BACKEND_URL, the chart image is omitted (not broken)
+        self.assertFalse(any(b.get("type") == "image" for b in blocks))
         # Should post channel history summary (either with alerts or empty state)
         self.assertTrue(any("alerta" in str(c).lower() for c in calls))
         # Should post workspace search results
         self.assertTrue(any("Búsqueda" in str(c) for c in calls))
         # Should call search.messages
         client.search_messages.assert_called_once()
+
+    @patch("slack_client.prediction.get_forecast")
+    @patch("slack_client.db.get_lab_config")
+    @patch.dict(os.environ, {"BACKEND_URL": "https://labops.example.com"})
+    def test_chart_image_included_with_public_https_backend(self, mock_get_lab_config, mock_get_forecast):
+        mock_get_forecast.return_value = {
+            "daily_demand": [
+                {"date": "2026-06-27", "predicted_qty": 200, "lower_bound": 180, "upper_bound": 220},
+            ]
+        }
+        mock_get_lab_config.return_value = None
+
+        ack = FakeAck()
+        client = MagicMock()
+        client.conversations_history.return_value = {"messages": []}
+        client.search_messages.return_value = {"messages": {"matches": []}}
+        body = {
+            "actions": [{"value": "TSH"}],
+            "channel": {"id": "C123"},
+            "message": {"ts": "1234567890.123456"},
+        }
+
+        handle_view_forecast(ack, body, client)
+
+        calls = client.chat_postMessage.call_args_list
+        forecast_call = [c for c in calls if "Pronóstico" in str(c)][0]
+        blocks = forecast_call[1]["blocks"]
+        image_blocks = [b for b in blocks if b.get("type") == "image"]
+        self.assertEqual(len(image_blocks), 1)
+        self.assertIn("https://labops.example.com/chart/forecast/TSH", image_blocks[0]["image_url"])
 
 
 class TestOrderReagent(unittest.TestCase):
@@ -266,6 +301,36 @@ class TestSearchMessages(unittest.TestCase):
         # User client should have been created with the user token
         mock_webclient_cls.assert_called_once_with(token="xoxp-test-user-token")
         mock_user_client.search_messages.assert_called_once()
+
+
+class TestDynamicSeverity(unittest.TestCase):
+    """Severity must be derived, never the hardcoded 'CRÍTICO' header."""
+
+    def test_severity_label_mapping(self):
+        from slack_client import _severity_label
+        self.assertEqual(_severity_label("critical"), "🔴 CRÍTICO")
+        self.assertEqual(_severity_label("warning"), "🟡 ADVERTENCIA")
+        self.assertEqual(_severity_label("anything_else"), "🟢 OK")
+
+    def test_alert_template_renders_warning_not_critico(self):
+        import blocks_loader as bl
+        from slack_client import _severity_label
+
+        blocks = bl.load_template(
+            "alert",
+            reagent_name="Hemograma",
+            current_stock=500,
+            projected_days=20,
+            explanation="Demanda estable.",
+            severity_label=_severity_label("warning"),
+        )["blocks"]
+
+        header = next(b for b in blocks if b.get("type") == "header")
+        self.assertIn("ADVERTENCIA", header["text"]["text"])
+        self.assertNotIn("CRÍTICO", header["text"]["text"])
+        # No literal placeholder left unrendered anywhere
+        self.assertNotIn("severity_label", str(blocks))
+        self.assertNotIn("{{", str(blocks))
 
 
 if __name__ == "__main__":

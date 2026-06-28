@@ -1,0 +1,130 @@
+{
+  "generated_by": "scripts/cross_validation.py",
+  "method": "rolling-origin cross-validation (prophet.diagnostics.cross_validation)",
+  "params": {
+    "initial": "240 days",
+    "period": "30 days",
+    "horizon": "14 days",
+    "interval_width": 0.8
+  },
+  "interpretation": {
+    "mape_percent": "mean absolute percentage error across all folds/horizons",
+    "coverage_80ci_percent": "fraction of actuals inside the 80% interval; ~80% = well-calibrated"
+  },
+  "results": {
+    "TSH": {
+      "reagent": "TSH",
+      "method": "rolling-origin cross-validation (prophet.diagnostics)",
+      "model": "Prophet (daily, yearly+weekly seasonality)",
+      "history_days": 365,
+      "params": {
+        "initial": "240 days",
+        "period": "30 days",
+        "horizon": "14 days",
+        "interval_width": 0.8
+      },
+      "folds": 4,
+      "n_predictions": 56,
+      "mae": 12.09,
+      "rmse": 16.21,
+      "mape_percent": 11.34,
+      "coverage_80ci_percent": 78.6,
+      "note": "DEMO — synthetic daily data calibrated with real AR demand patterns"
+    },
+    "Hemograma": {
+      "reagent": "Hemograma",
+      "method": "rolling-origin cross-validation (prophet.diagnostics)",
+      "model": "Prophet (daily, yearly+weekly seasonality)",
+      "history_days": 365,
+      "params": {
+        "initial": "240 days",
+        "period": "30 days",
+        "horizon": "14 days",
+        "interval_width": 0.8
+      },
+      "folds": 4,
+      "n_predictions": 56,
+      "mae": 14.14,
+      "rmse": 17.38,
+      "mape_percent": 8.39,
+      "coverage_80ci_percent": 80.4,
+      "note": "DEMO — synthetic daily data calibrated with real AR demand patterns"
+    },
+    "Ionograma": {
+      "reagent": "Ionograma",
+      "method": "rolling-origin cross-validation (prophet.diagnostics)",
+      "model": "Prophet (daily, yearly+weekly seasonality)",
+      "history_days": 365,
+      "params": {
+        "initial": "240 days",
+        "period": "30 days",
+        "horizon": "14 days",
+        "interval_width": 0.8
+      },
+      "folds": 4,
+      "n_predictions": 56,
+      "mae": 12.77,
+      "rmse": 15.71,
+      "mape_percent": 8.44,
+      "coverage_80ci_percent": 80.4,
+      "note": "DEMO — synthetic daily data calibrated with real AR demand patterns"
+    },
+    "Glucosa": {
+      "reagent": "Glucosa",
+      "method": "rolling-origin cross-validation (prophet.diagnostics)",
+      "model": "Prophet (daily, yearly+weekly seasonality)",
+      "history_days": 365,
+      "params": {
+        "initial": "240 days",
+        "period": "30 days",
+        "horizon": "14 days",
+        "interval_width": 0.8
+      },
+      "folds": 4,
+      "n_predictions": 56,
+      "mae": 10.71,
+      "rmse": 13.16,
+      "mape_percent": 8.45,
+      "coverage_80ci_percent": 82.1,
+      "note": "DEMO — synthetic daily data calibrated with real AR demand patterns"
+    },
+    "Urea": {
+      "reagent": "Urea",
+      "method": "rolling-origin cross-validation (prophet.diagnostics)",
+      "model": "Prophet (daily, yearly+weekly seasonality)",
+      "history_days": 365,
+      "params": {
+        "initial": "240 days",
+        "period": "30 days",
+        "horizon": "14 days",
+        "interval_width": 0.8
+      },
+      "folds": 4,
+      "n_predictions": 56,
+      "mae": 6.44,
+      "rmse": 7.88,
+      "mape_percent": 8.52,
+      "coverage_80ci_percent": 82.1,
+      "note": "DEMO — synthetic daily data calibrated with real AR demand patterns"
+    },
+    "Creatinina": {
+      "reagent": "Creatinina",
+      "method": "rolling-origin cross-validation (prophet.diagnostics)",
+      "model": "Prophet (daily, yearly+weekly seasonality)",
+      "history_days": 365,
+      "params": {
+        "initial": "240 days",
+        "period": "30 days",
+        "horizon": "14 days",
+        "interval_width": 0.8
+      },
+      "folds": 4,
+      "n_predictions": 56,
+      "mae": 6.89,
+      "rmse": 8.46,
+      "mape_percent": 8.66,
+      "coverage_80ci_percent": 78.6,
+      "note": "DEMO — synthetic daily data calibrated with real AR demand patterns"
+    }
+  }
+}

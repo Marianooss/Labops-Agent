@@ -4,7 +4,7 @@
       "type": "header",
       "text": {
         "type": "plain_text",
-        "text": "🔴 CRÍTICO — {{reagent_name}}",
+        "text": "{{severity_label}} — {{reagent_name}}",
         "emoji": true
       }
     },
@@ -17,7 +17,7 @@
         },
         {
           "type": "mrkdwn",
-          "text": "*Severidad:*\n🔴 CRÍTICO"
+          "text": "*Severidad:*\n{{severity_label}}"
         },
         {
           "type": "mrkdwn",

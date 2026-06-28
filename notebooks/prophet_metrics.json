@@ -1,40 +1,44 @@
 {
   "model": "Prophet (Facebook/Meta)",
   "temperature": 0,
+  "primary_metric": "rolling_origin_cross_validation",
+  "rolling_origin_cross_validation": {
+    "source": "notebooks/cv_metrics.json (reproduce with: python scripts/cross_validation.py)",
+    "method": "prophet.diagnostics.cross_validation on the daily model that serves forecasts",
+    "params": {
+      "initial": "240 days",
+      "period": "30 days",
+      "horizon": "14 days",
+      "interval_width": 0.8,
+      "folds_per_reagent": 4,
+      "predictions_per_reagent": 56
+    },
+    "results": {
+      "TSH": { "mape_percent": 11.34, "mae": 12.09, "rmse": 16.21, "coverage_80ci_percent": 78.6 },
+      "Hemograma": { "mape_percent": 8.39, "mae": 14.14, "rmse": 17.38, "coverage_80ci_percent": 80.4 },
+      "Ionograma": { "mape_percent": 8.44, "mae": 12.77, "rmse": 15.71, "coverage_80ci_percent": 80.4 },
+      "Glucosa": { "mape_percent": 8.45, "mae": 10.71, "rmse": 13.16, "coverage_80ci_percent": 82.1 },
+      "Urea": { "mape_percent": 8.52, "mae": 6.44, "rmse": 7.88, "coverage_80ci_percent": 82.1 },
+      "Creatinina": { "mape_percent": 8.66, "mae": 6.89, "rmse": 8.46, "coverage_80ci_percent": 78.6 }
+    },
+    "interpretation": "Out-of-sample MAPE ~8-11% across 4 rolling folds. Coverage of the 80% interval is ~79-82% across reagents, i.e. the uncertainty bands are well calibrated (close to the nominal 80%). This is the headline accuracy figure.",
+    "note": "DEMO — synthetic daily data calibrated with real AR demand patterns"
+  },
   "self_consistency_on_synthetic_daily": {
     "reagent": "TSH",
     "history_days": 365,
-    "method": "Prophet cross-validation on 365-day synthetic daily data",
+    "method": "Prophet fit and scored on its own training data",
     "mae": 16.51,
     "rmse": 20.6,
     "mape_percent": 15.75,
     "coverage": 0.609,
-    "note": "Self-consistency check on synthetic daily data. Not a true hold-out test."
+    "note": "NOT a real test — kept only for transparency. Use rolling_origin_cross_validation instead."
   },
-  "honest_holdout_backtest": {
+  "monthly_holdout_backtest": {
     "source": "notebooks/holdout_metrics.json",
-    "method": "Train on 2024-2025 seeded monthly data, predict 2026 hold-out",
-    "TSH": {
-      "train_samples": 24,
-      "test_samples": 7,
-      "mae": 5.28,
-      "rmse": 7.04,
-      "mape_percent": 3.29
-    },
-    "Hemograma": {
-      "train_samples": 10,
-      "test_samples": 1,
-      "mae": 9.7,
-      "rmse": 9.7,
-      "mape_percent": 4.62
-    },
-    "Ionograma": {
-      "train_samples": 10,
-      "test_samples": 1,
-      "mae": 13.78,
-      "rmse": 13.78,
-      "mape_percent": 7.45
-    },
-    "note": "DEMO — synthetic monthly data calibrated with real AR demand patterns. Conservative Prophet settings (flat growth, changepoint_prior_scale=0.001) used for sparse reagents to prevent trend extrapolation."
+    "method": "Train on 2024-2025 seeded MONTHLY points, predict 2026 hold-out",
+    "TSH": { "train_samples": 24, "test_samples": 7, "mape_percent": 3.29 },
+    "caveat": "Illustrative only. The TSH figure rests on 7 monthly test points; the Hemograma/Ionograma figures rested on a SINGLE test point each and are statistically meaningless — they have been DROPPED from all reported metrics. Do not cite the monthly MAPE as the model's accuracy; cite rolling_origin_cross_validation.",
+    "note": "DEMO — synthetic monthly data calibrated with real AR demand patterns"
   }
 }

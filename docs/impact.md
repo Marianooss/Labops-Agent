@@ -71,19 +71,27 @@ react; they don't plan.
 | Uremia | Medium | Stable |
 | Ionograma | Medium | Stable |
 
-**Model accuracy:**
+**Model accuracy — rolling-origin cross-validation (headline metric):**
 - Algorithm: Prophet (Facebook/Meta)
-- Self-consistency on synthetic daily data: MAPE 15.75%, RMSE 20.6 units
-  *(This is model self-consistency on its own synthetic training data —
-  not a true out-of-sample test. Relabeled for honesty.)*
-- **Honest hold-out backtest** (train 2024-2025 monthly data → predict 2026):
-  | Reagent | Train | Test | MAE | RMSE | MAPE |
-  |---------|-------|------|-----|------|------|
-  | TSH | 24 | 7 | 5.28 | 7.04 | **3.29%** |
-  | Hemograma | 10 | 1 | 9.70 | 9.70 | 4.62% |
-  | Ionograma | 10 | 1 | 13.78 | 13.78 | 7.45% |
-- Critical stockout flags: 100% reproducible at temperature=0
-- Secondary flags: 13-14/run variance (documented in ADR-007)
+- Method: `prophet.diagnostics.cross_validation` on the daily model that serves
+  forecasts — initial=240d, period=30d, horizon=14d → 4 folds, 56 predictions/reagent.
+  Reproduce: `python scripts/cross_validation.py` → `notebooks/cv_metrics.json`.
+
+  | Reagent | MAPE | MAE | RMSE | 80% CI coverage |
+  |---------|------|-----|------|-----------------|
+  | TSH | 11.34% | 12.09 | 16.21 | 78.6% |
+  | Hemograma | 8.39% | 14.14 | 17.38 | 80.4% |
+  | Ionograma | 8.44% | 12.77 | 15.71 | 80.4% |
+  | Glucosa | 8.45% | 10.71 | 13.16 | 82.1% |
+  | Urea | 8.52% | 6.44 | 7.88 | 82.1% |
+  | Creatinina | 8.66% | 6.89 | 8.46 | 78.6% |
+
+  Out-of-sample MAPE ~8–11%; 80% interval coverage ~79–82% (well calibrated).
+- Critical stockout flags: 100% reproducible at temperature=0.
+- **Removed/caveated for honesty:** the previous "84.3% / MAPE 15.75%" figure was
+  self-consistency on training data (not a real test). A monthly hold-out backtest
+  exists, but its Hemograma/Ionograma numbers rested on a *single test point each*
+  and are statistically meaningless — they are not cited. Cite the CV table above.
 
 ---
 
@@ -157,7 +165,7 @@ No product in the Slack Marketplace combines:
 | Metric | Target | How Measured |
 |---|---|---|
 | Stockout reduction | 40%+ | Compare stockout events before/after |
-| Alert accuracy | Hold-out MAPE 3-7% | Train 2024-2025 monthly → predict 2026 (TSH 3.29%, Hemograma 4.62%, Ionograma 7.45%) |
+| Alert accuracy | Rolling-origin CV MAPE ~8-11%, 80% CI coverage ~79-82% | `prophet.diagnostics.cross_validation` (4 folds, 14-day horizon) — see `notebooks/cv_metrics.json` |
 | Time-to-order | <5 min | From alert to confirmed order in Slack |
 | Lab adoption | 5 pilots in 90 days | Active sandbox installations |
 
@@ -174,9 +182,9 @@ No product in the Slack Marketplace combines:
    Laboratory accreditation registry.
    https://www.anlis.gob.ar/
 
-3. Prophet forecasting model validation:
-   See `notebooks/prophet_validation.ipynb`
-   (MAE: 16.51, RMSE: 20.6, MAPE: 15.75%, Accuracy: 84.3%)
+3. Prophet forecasting model validation (rolling-origin cross-validation):
+   See `notebooks/cv_metrics.json` (reproduce: `python scripts/cross_validation.py`).
+   Out-of-sample MAPE ~8–11%, 80% CI coverage ~79–82% across 6 reagents.
 
 ---
 

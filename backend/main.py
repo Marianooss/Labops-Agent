@@ -14,7 +14,7 @@ import database as db
 import prediction
 import claude_client as claude
 import mcp_server as mcp
-from slack_client import bolt_app, _post_stockout_alert
+from slack_client import bolt_app, _post_stockout_alert, check_and_send_stockout_alerts
 
 logging.basicConfig(
     level=logging.INFO,
@@ -133,6 +133,56 @@ def api_trigger_alert(
 
 
 # ---------------------------------------------------------------------------
+# Multi-reagent reasoning — project EVERY reagent, not just TSH.
+# Demonstrates the agent reasoning across the inventory: TSH fires CRITICAL on
+# the winter spike while stable reagents (Hemograma, Ionograma, ...) stay OK.
+# ---------------------------------------------------------------------------
+@app.get("/alert/check-all")
+def api_check_all(
+    post: bool = False,
+    channel: str = os.environ.get("LABOPS_ALERTS_CHANNEL", "#labops-alerts"),
+) -> Dict[str, Any]:
+    try:
+        items = db.get_inventory()
+    except Exception as e:
+        return {"error": f"inventory unavailable: {e}"}
+
+    reagents = []
+    for item in items:
+        reagent = item["reagent_name"]
+        stock = item["current_stock"]
+        lead = item.get("reorder_lead_time_days", 7)
+        try:
+            proj = prediction.calculate_stockout_projection(reagent, stock, lead)
+            reagents.append(
+                {
+                    "reagent": reagent,
+                    "current_stock": stock,
+                    "projected_stockout_days": proj["projected_stockout_days"],
+                    "reorder_lead_time": proj["reorder_lead_time"],
+                    "severity": proj["severity"],
+                    "alert_trigger": proj["alert_trigger"],
+                }
+            )
+        except Exception as e:
+            reagents.append({"reagent": reagent, "error": str(e)})
+
+    # Sort most-urgent first (soonest stockout). None (no stockout) sorts last.
+    reagents.sort(key=lambda r: (r.get("projected_stockout_days") is None, r.get("projected_stockout_days", 1e9)))
+
+    # Optionally post Block Kit alerts to Slack for the ones that actually trigger.
+    if post:
+        check_and_send_stockout_alerts(channel)
+
+    return {
+        "reagents": reagents,
+        "critical": [r["reagent"] for r in reagents if r.get("severity") == "critical"],
+        "posted_to_slack": bool(post),
+        "note": "DEMO — synthetic data calibrated with real AR demand patterns",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Forecast chart (PNG) — embedded in Block Kit messages
 # ---------------------------------------------------------------------------
 from io import BytesIO
@@ -210,3 +260,13 @@ def startup():
             logger.info("Prophet model pre-trained for %s", reagent)
         except Exception as e:
             logger.warning("Failed to pre-train model for %s: %s", reagent, e)
+
+    # Co-host Socket Mode with this web service when RUN_SOCKET_MODE is enabled.
+    # One persistent host then serves both the public chart endpoint and the
+    # Slack websocket — the deploy model used on Render/Railway/Fly (NOT Vercel).
+    if os.environ.get("RUN_SOCKET_MODE", "").strip().lower() in ("1", "true", "yes"):
+        try:
+            from slack_client import start_socket_mode_in_thread
+            start_socket_mode_in_thread()
+        except Exception as e:
+            logger.warning("Could not start Socket Mode thread: %s", e)

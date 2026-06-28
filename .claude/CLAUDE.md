@@ -21,7 +21,7 @@ Before writing or editing ANY code:
 - **Track:** Slack Agent Builder Challenge 2026 (Salesforce)
 - **Prize:** $8,000 USD (First Place)
 - **Stack:** FastAPI + Bolt Python + Supabase + Prophet + Claude API
-- **Deploy:** Vercel (backend) + Slack Developer Sandbox
+- **Deploy:** Render / Railway / Fly (persistent host) + Slack Developer Sandbox — **not** Vercel (Socket Mode needs a persistent websocket; see BIBLE DEC-07)
 - **No PHI ever.** Only operational lab data (reagents, quantities, equipment names).
 
 ## 3. DECISION FILTER
@@ -45,7 +45,7 @@ If a change improves none → do NOT make it.
 | LLM | Claude API `claude-sonnet-4-6`, **temperature=0** |
 | UI | Slack Block Kit (buttons, modals) |
 | Canvases | Slack Canvas API |
-| Deploy | Vercel + Slack Sandbox |
+| Deploy | Render / Railway / Fly (persistent host) + Slack Sandbox — **not** Vercel (Socket Mode needs a persistent websocket; see BIBLE DEC-07) |
 
 ## 5. BLOCK KIT FIRST RULE
 

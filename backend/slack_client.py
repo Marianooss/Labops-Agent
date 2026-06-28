@@ -48,8 +48,16 @@ bolt_app = App(
 # ---------------------------------------------------------------------------
 # UTILS
 # ---------------------------------------------------------------------------
-def _severity_badge(severity: str) -> str:
-    return "🔴 *CRITICAL*" if severity == "critical" else "🟡 *WARNING*"
+def _severity_label(severity: str) -> str:
+    """Human-readable, emoji-prefixed severity label. Drives the alert header.
+
+    Derived from the model's projection (critical = stockout < lead time),
+    NEVER hardcoded — so a non-critical reagent renders as ADVERTENCIA, not CRÍTICO.
+    """
+    return {
+        "critical": "🔴 CRÍTICO",
+        "warning": "🟡 ADVERTENCIA",
+    }.get(severity, "🟢 OK")
 
 
 def _demo_badge() -> Dict[str, Any]:
@@ -62,6 +70,23 @@ def _demo_badge() -> Dict[str, Any]:
             }
         ],
     }
+
+
+def _public_chart_url(reagent_name: str, days: int = 14) -> Optional[str]:
+    """Return a chart URL only if Slack can actually fetch it.
+
+    Slack renders `image` blocks by fetching the URL from its own servers, so
+    localhost / 127.* / http origins never render. We emit an image block only
+    when BACKEND_URL is a public HTTPS origin (deploy URL or tunnel); otherwise
+    callers fall back to native Block Kit fields so the message is never broken.
+    """
+    backend_url = os.environ.get("BACKEND_URL", "").strip().rstrip("/")
+    if not backend_url.startswith("https://"):
+        return None
+    host = backend_url.split("://", 1)[-1].split("/", 1)[0].lower()
+    if host.startswith(("localhost", "127.", "0.0.0.0")):
+        return None
+    return f"{backend_url}/chart/forecast/{reagent_name}?days={days}"
 
 
 def _update_inventory_canvas(client, channel_id: str, thread_ts: str, updated_reagent: str):
@@ -253,12 +278,9 @@ def _post_stockout_alert(channel: str, reagent_name: str, projected_days: int, s
             current_stock=current_stock,
             projected_days=projected_days,
             explanation=explanation,
+            severity_label=_severity_label(severity),
         )
         blocks = template["blocks"]
-        # Inject dynamic severity badge into the explanation section
-        for block in blocks:
-            if block.get("type") == "section" and block.get("text", {}).get("text", "").startswith("*¿Por qué?*"):
-                block["text"]["text"] = f"{_severity_badge(severity)}\n{explanation}"
         return bolt_app.client.chat_postMessage(
             channel=channel,
             blocks=blocks,
@@ -288,35 +310,59 @@ def handle_view_forecast(ack, body, client):
         forecast = prediction.get_forecast(reagent, days=14)
         next_7 = forecast["daily_demand"][:7]
 
-        rows = ""
-        for day in next_7:
-            rows += f"| {day['date']} | {day['predicted_qty']} | {day['lower_bound']} – {day['upper_bound']} |\n"
-
-        table = (
-            f"*Pronóstico de demanda — {reagent} (próximos 7 días)*\n"
-            f"```\n| Fecha       | Predicción | Rango (80% CI) |\n"
-            f"|-------------|------------|----------------|\n"
-            f"{rows}```"
-        )
-
         # -------------------------------------------------------------------
-        # Rich Block Kit: forecast table + embedded chart image
+        # Native Block Kit fields — one field per day (no ASCII tables).
+        # Slack section `fields` allows up to 10 items; 7 days fits cleanly.
         # -------------------------------------------------------------------
-        backend_url = os.environ.get("BACKEND_URL", "http://localhost:8000")
-        chart_url = f"{backend_url}/chart/forecast/{reagent}?days=14"
+        forecast_fields = [
+            {
+                "type": "mrkdwn",
+                "text": (
+                    f"*{day['date']}*\n"
+                    f"{day['predicted_qty']:.0f} u · "
+                    f"{day['lower_bound']:.0f}–{day['upper_bound']:.0f}"
+                ),
+            }
+            for day in next_7
+        ]
+        total_7 = sum(d["predicted_qty"] for d in next_7)
+        mean_day = total_7 / len(next_7) if next_7 else 0
 
-        client.chat_postMessage(
-            channel=channel,
-            thread_ts=thread_ts,
-            blocks=[
-                {"type": "section", "text": {"type": "mrkdwn", "text": table}},
+        forecast_blocks = [
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": f"📊 Pronóstico — {reagent}", "emoji": True},
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": (
+                        f"*Próximos 7 días* · demanda media ~{mean_day:.0f} u/día · "
+                        f"total ~{total_7:.0f} u\n"
+                        f"_Rango = banda de confianza 80% (Prophet)_"
+                    ),
+                },
+            },
+            {"type": "section", "fields": forecast_fields},
+        ]
+
+        # Embed the rendered PNG chart only when Slack can fetch it (public HTTPS).
+        chart_url = _public_chart_url(reagent, days=14)
+        if chart_url:
+            forecast_blocks.append(
                 {
                     "type": "image",
                     "image_url": chart_url,
                     "alt_text": f"Pronóstico de demanda — {reagent}",
-                },
-                _demo_badge(),
-            ],
+                }
+            )
+        forecast_blocks.append(_demo_badge())
+
+        client.chat_postMessage(
+            channel=channel,
+            thread_ts=thread_ts,
+            blocks=forecast_blocks,
             text=f"Pronóstico {reagent}",
         )
 
@@ -818,6 +864,26 @@ def start_socket_mode():
             time.sleep(3600)
     handler = SocketModeHandler(bolt_app, SLACK_APP_TOKEN)
     handler.start()
+
+
+def start_socket_mode_in_thread():
+    """Start Socket Mode in a daemon thread, co-hosted with the FastAPI web service.
+
+    This lets ONE persistent host (e.g. a Render web service) both serve the
+    public HTTPS chart endpoint AND hold the Socket Mode websocket — which is why
+    Socket Mode cannot run on Vercel-style serverless functions. Returns the
+    thread (or None if no app token is configured).
+    """
+    import threading
+
+    if not SLACK_APP_TOKEN:
+        logger.warning("SLACK_APP_TOKEN not set — Socket Mode thread not started.")
+        return None
+    handler = SocketModeHandler(bolt_app, SLACK_APP_TOKEN)
+    thread = threading.Thread(target=handler.start, name="socket-mode", daemon=True)
+    thread.start()
+    logger.info("Socket Mode started in background thread (co-hosted with web service).")
+    return thread
 
 
 if __name__ == "__main__":

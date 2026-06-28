@@ -11,6 +11,11 @@ Before recording:
 - [ ] Supabase has seed data loaded (TSH stock=680, is_demo=true)
 - [ ] FastAPI backend running: `uvicorn backend.main:app --reload` (auto-pre-trains Prophet models on startup)
 - [ ] Slack client running: `python -m backend.slack_client`
+- [ ] **Chart rendering:** `BACKEND_URL` set to a public HTTPS origin so the forecast
+      PNG renders in Slack. Either deploy (Render) or run a tunnel:
+      `cloudflared tunnel --url http://localhost:8000` → paste the `https://…` URL
+      into `BACKEND_URL` and restart the Slack client. *(If you skip this, the
+      forecast still shows as native Block Kit fields — the chart is just omitted.)*
 - [ ] Slack sandbox open in browser, `#labops-alerts` channel visible
 - [ ] Screen recording software ready (no camera needed, screen only)
 
@@ -46,18 +51,17 @@ curl "http://localhost:8000/alert/trigger?reagent_name=TSH&channel=labops-alerts
 
 **[Screen: Watch the Block Kit alert appear in #labops-alerts]**
 
-The message shows:
+The message shows (the severity header is **derived from the model**, not
+hardcoded — a non-critical reagent would render `🟡 ADVERTENCIA`):
 ```
 🔴 CRÍTICO — TSH
 
-📊 Proyección de stockout: ~4 días
-📦 Stock actual: 680 unidades
-📈 Demanda proyectada: ~205 unid/día (pico de invierno)
-⚠️ Lead time de reorden: 7 días
+Reactivo: TSH            Severidad: 🔴 CRÍTICO
+Stock actual: 680 u.     Stockout proyectado: ~4 días
 
-Por qué: La demanda de TSH aumenta un 80% en invierno
-(junio-agosto) en Argentina. El stock actual no cubre
-el período de reorden.
+¿Por qué? La demanda de TSH aumenta ~80% en invierno
+(junio-agosto) en Argentina (~185 unid/día proyectado).
+El stock actual (680) no cubre el período de reorden de 7 días.
 
 [📊 Ver proyección]  [🛒 Ordenar reactivo]  [👤 Asignar al equipo]
 
@@ -104,10 +108,10 @@ Proveedor:   [▼ LabSupplier AR  ]   [dropdown]
 
 **[Screen: Thread reply appears + Canvas updates]**
 
-Thread reply:
+Thread reply (quantity matches the modal's suggested 340 = 50% of 680):
 ```
 ✅ Orden creada
-TSH · 500 unidades · LabSupplier AR
+TSH · 340 unidades · LabSupplier AR
 Estado: pending · ID: #ORD-2026-001
 🔬 DEMO
 ```
@@ -136,28 +140,55 @@ Type in channel:
 
 **[Screen: Claude AI summary appears in thread]**
 
-The agent responds with:
+The agent responds with **native Block Kit fields** (no ASCII tables) — a header,
+a summary line, one field per day, and (when `BACKEND_URL` is public) the embedded
+Prophet chart PNG:
 ```
-📊 Proyección — TSH (próximos 7 días)
+📊 Pronóstico — TSH
+Próximos 7 días · demanda media ~185 u/día · total ~1295 u
+Rango = banda de confianza 80% (Prophet)
+
+2026-06-29        2026-06-30        2026-07-01
+216 u · 198–235   214 u · 196–233   217 u · 199–236
+
+2026-07-02        2026-07-03        2026-07-04
+130 u · 112–149   131 u · 113–150   215 u · 197–234
+
+2026-07-05
+129 u · 111–148
+
+[ chart: Demand Forecast — TSH (line + 80% CI band) ]
 🔬 DEMO — datos sintéticos
-
-Fecha         Demanda proyectada    Banda
-2026-06-27    207 unid              190-224
-2026-06-28    209 unid              192-226
-2026-06-29    211 unid              194-228
-2026-06-30    205 unid              188-222
-2026-07-01    208 unid              191-225
-2026-07-02    212 unid              195-229
-2026-07-03    210 unid              193-227
-
-📉 Stock actual (680) se agota ~2026-06-30
-🔴 CRÍTICO: 4 días < 7 días de lead time
 ```
+> Note: weekends dip (~130 u) and weekdays peak (~215 u); at this rate the
+> current stock of 680 is consumed by **~2026-07-02 (~4 days)** — inside the
+> 7-day reorder window, hence the 🔴 CRÍTICO flag.
 
 **Narration:**
 > "The agent also surfaces 7-day demand forecasts with confidence bands.
 > And when you ask about recent history, Claude AI summarizes past
 > alerts from the channel history — giving full context without leaving Slack."
+
+**[Optional beat — reasoning over MULTIPLE reagents, not just TSH]**
+
+Type in channel (or hit `GET /alert/check-all` for the deterministic version):
+```
+@LabOps compará el riesgo de stockout de TSH, Hemograma e Ionograma
+```
+
+The agent calls `get_inventory` + `get_forecast` per reagent and reasons across
+the whole inventory — showing that the severity is computed, not hardcoded:
+```
+🤖 LabOps Agent
+🔴 TSH        — ~4 días  → CRÍTICO  (pico de invierno)
+🟢 Hemograma  — >30 días → OK       (demanda estable)
+🟢 Ionograma  — >30 días → OK       (demanda estable)
+🔬 DEMO
+```
+
+**Narration:**
+> "And it reasons across the whole inventory — TSH is critical because of the
+> winter spike, while Hemograma and Ionograma stay stable. Same model, per-reagent."
 
 ---
 

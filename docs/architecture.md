@@ -55,7 +55,8 @@ demand forecasting.
 │  │  Algorithm: Prophet (Facebook/Meta)                      │    │
 │  │  Training: synthetic data calibrated with real patterns  │    │
 │  │  Source: anonymized demand analysis (Argentina)          │    │
-│  │  Accuracy: 84.3% cross-validation (MAPE 15.75%)          │    │
+│  │  Accuracy: rolling-origin CV MAPE ~8-11%, 80% CI         │    │
+│  │            coverage ~79-82% (well calibrated)            │    │
 │  │                                                          │    │
 │  │  Key patterns:                                           │    │
 │  │  - TSH: winter_mult=1.8 (Jun-Aug spike in AR)           │    │
@@ -114,7 +115,13 @@ Query method: client.conversations_history(channel_id) filtered by reagent name
 Returns: past alerts, orders placed, resolutions
 ```
 
-### 3. Slack Search API (Real-Time Search)
+### 3. Slack Search API (Real-Time Search) — *optional enhancement*
+> The three technologies that work out-of-the-box with the bot token are the
+> **MCP Server**, the **Channel History API**, and **Claude API summarization**.
+> `search.messages` below is an *optional* add-on: it needs a workspace user
+> token, so it is not part of the headline tech and degrades gracefully when
+> absent. Enable it only if a `SLACK_USER_TOKEN` is provided.
+
 **What it does:** Searches the entire workspace in real time for reagent mentions using Slack's `search.messages` API.
 
 When a user clicks "📊 Ver proyección", the agent runs a real-time search for the reagent across all accessible channels (not just `#labops-alerts`). This surfaces relevant conversations, past alerts, and team discussions that may not be in the immediate channel history.
@@ -153,13 +160,15 @@ T+1s:   Prophet model loaded from models/TSH_model.pkl
         → predicts daily demand for next 90 days
         → cumulative demand vs current_stock = stockout_date
 
-T+2s:   projected_stockout_days=3.3 < reorder_lead_time=7
+T+2s:   projected_stockout_days=4 < reorder_lead_time=7
         → alert_trigger=True, severity="critical"
+        (680 units ÷ ~185 u/day winter mean → cumulative demand
+         crosses stock on day 4)
 
 T+3s:   Claude API called (temperature=0)
         → generates natural language explanation
         → "TSH demand spikes in winter (Jun-Aug). Current stock
-           will cover ~3 days at projected consumption rate."
+           will cover ~4 days at projected consumption rate."
 
 T+4s:   Bolt Python sends Block Kit message to #labops-alerts
         → 🔴 CRITICAL badge
@@ -194,16 +203,38 @@ The synthetic data preserves the statistical patterns (seasonal multipliers,
 weekly rhythms, noise levels) without including any real patient or
 laboratory identifiers.
 
-**Performance:**
-- Self-consistency on synthetic daily data: MAPE 15.75%, RMSE 20.6 units
-  *(Relabeled — this is the model tested on its own synthetic training data.)*
-- **Honest hold-out backtest** (train 2024-2025 monthly data → predict 2026):
-  - TSH: MAPE **3.29%** (MAE 5.28, RMSE 7.04, 7 test points)
-  - Hemograma: MAPE 4.62% (MAE 9.70, 1 test point)
-  - Ionograma: MAPE 7.45% (MAE 13.78, 1 test point)
-- Critical flags (stockout within lead time): 100% reproducible at temperature=0
-- Model serialized to `models/{reagent}_model.pkl` after first fit (~10-30s)
-- Subsequent calls load from disk (<100ms)
+**Performance — rolling-origin cross-validation (headline metric):**
+
+Measured with `prophet.diagnostics.cross_validation` on the daily model that
+actually serves forecasts (initial=240d, period=30d, horizon=14d → 4 folds,
+56 predictions per reagent). Reproduce with `python scripts/cross_validation.py`
+(writes `notebooks/cv_metrics.json`).
+
+| Reagent | MAPE | MAE | RMSE | 80% CI coverage |
+|---------|------|-----|------|-----------------|
+| TSH | 11.34% | 12.09 | 16.21 | 78.6% |
+| Hemograma | 8.39% | 14.14 | 17.38 | 80.4% |
+| Ionograma | 8.44% | 12.77 | 15.71 | 80.4% |
+| Glucosa | 8.45% | 10.71 | 13.16 | 82.1% |
+| Urea | 8.52% | 6.44 | 7.88 | 82.1% |
+| Creatinina | 8.66% | 6.89 | 8.46 | 78.6% |
+
+Out-of-sample MAPE lands in the ~8–11% range, and coverage of the 80% interval
+is ~79–82% — i.e. the uncertainty bands are well calibrated (close to the
+nominal 80%), not over-confident.
+
+**Caveats (honesty):**
+- The earlier "84.3% / MAPE 15.75% cross-validation" figure was *self-consistency
+  on the model's own training data* — not a real test. It has been removed as a
+  headline claim.
+- A monthly hold-out backtest (`notebooks/holdout_metrics.json`) exists, but the
+  Hemograma/Ionograma figures there rested on a **single test point each** and are
+  statistically meaningless — they are **not** cited. The TSH monthly figure
+  (3.29%, 7 points) is illustrative only; the rolling-origin CV above is the
+  metric to cite.
+- Critical flags (stockout within lead time): 100% reproducible at temperature=0.
+- Model serialized to `models/{reagent}_model.pkl` after first fit (~10-30s);
+  subsequent calls load from disk (<100ms).
 
 ---
 
@@ -226,7 +257,7 @@ laboratory identifiers.
 | Prediction | Prophet | 1.1.5 |
 | Database | Supabase (PostgreSQL) | — |
 | LLM | Claude API (claude-sonnet-4-6) | — |
-| Deploy | Docker + Socket Mode (local) / Heroku / Render (cloud) | Socket Mode for real-time events |
+| Deploy | Render / Railway / Fly (persistent host) — see `render.yaml` | Socket Mode needs a long-lived process; **not** Vercel serverless |
 | Language | Python | 3.11+ |
 
 ---

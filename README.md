@@ -12,7 +12,7 @@ LabOps Agent is a Slack-native AI agent that predicts reagent stockouts in clini
 
 Clinical laboratories run on reagents. When a critical reagent runs out mid-operation, testing stops. Current solutions (Quartzy, Scispot) only send passive threshold alerts **after** stock is already low. No product today predicts stockouts based on test-type demand patterns.
 
-**Example:** TSH demand spikes every winter in Argentina (Jun–Aug). A lab with 680 units at 205 units/day will run out in 3.3 days. Without prediction, they find out when the analyzer throws an error.
+**Example:** TSH demand spikes every winter in Argentina (Jun–Aug). A lab with 680 units, at a projected winter demand of ~185 units/day, runs out in **~4 days** — inside the 7-day reorder window. Without prediction, they find out when the analyzer throws an error.
 
 ---
 
@@ -37,9 +37,13 @@ No existing product (Quartzy, Scispot, Benchling) combines:
 |---|---|---|
 | **MCP Server** | Exposes 4 lab tools: `get_inventory`, `get_forecast`, `create_order`, `update_canvas` | Anthropic/Slack |
 | **Claude Tool-Use Agent** | LLM selects and invokes MCP tools via `agent_router.py` on every @mention | Anthropic |
-| **Slack Search API** | Real-time workspace search for reagent mentions across channels (`search.messages`) — requires user token | Slack |
-| **Slack Channel History API** | Queries #labops-alerts message history for past reagent incidents | Slack |
+| **Slack Channel History API** | Queries #labops-alerts message history for past reagent incidents (works with the bot token) | Slack |
 | **Claude API Summarization** | Generates natural language summaries of reagent alert history | Anthropic |
+
+> **Optional add-on (not part of the headline tech):** the **Slack Search API**
+> (`search.messages`) surfaces cross-channel mentions, but it requires a workspace
+> **user token** (`xoxp-`) — the bot token returns empty results. It is wired up
+> and degrades gracefully when absent; set `SLACK_USER_TOKEN` to enable it.
 
 ---
 
@@ -75,7 +79,7 @@ Tools available:
 │  │   MCP SERVER    │   │   PREDICTION ENGINE      │ │
 │  │ get_inventory   │   │   Prophet + seasonality  │ │
 │  │ get_forecast    │   │   calibrated: synthetic  │ │
-│  │ create_order    │   │   hold-out MAPE 3-7%     │ │
+│  │ create_order    │   │   rolling-CV MAPE 8-11%  │ │
 │  │ update_canvas   │   └──────────────────────────┘ │
 │  └─────────────────┘                                 │
 └─────────────────────────────────┬───────────────────┘
@@ -110,14 +114,31 @@ Tools available:
 
 ## Try it Live
 
-> **Slack Sandbox URL:** https://labopsespacio.slack.com — [Join the Slack Developer Program](https://api.slack.com/developer-program) to create your own sandbox, or install LabOps Agent in your workspace using the manifest below.
->
-> To test now:
-> 1. Join the [Slack Developer Program](https://api.slack.com/developer-program)
-> 2. Create a Developer Sandbox workspace
-> 3. Create a new app from [`slack-manifest.json`](slack-manifest.json)
-> 4. Run `docker-compose up --build`
-> 5. Paste your Bot Token and App Token into `.env`
+> **Demo video (≤3 min):** _<add YouTube/Vimeo link here once recorded>_ — this is
+> the canonical proof that the agent runs live in a real Slack sandbox.
+> **Sandbox workspace:** `https://labopsespacio.slack.com` (invite-only sandbox).
+
+### Reproduce the live deploy (judge-reachable, chart renders)
+
+Slack fetches forecast-chart images from its own servers, so the backend must be
+reachable over **public HTTPS**. Socket Mode also needs a **persistent host**, so
+this deploys to Render/Railway/Fly — **not** Vercel serverless (see
+[Deployment](#deployment-render--railway--fly)).
+
+1. Join the [Slack Developer Program](https://api.slack.com/developer-program) and create a Developer Sandbox workspace.
+2. Create a new app from [`slack-manifest.json`](slack-manifest.json), install it, and copy the Bot + App tokens.
+3. Deploy with the included [`render.yaml`](render.yaml) blueprint (one persistent web service hosts both the chart endpoint and the Socket Mode websocket).
+4. After the first deploy, set `BACKEND_URL=https://<your-service>.onrender.com` and redeploy so the forecast chart renders in Slack.
+
+**Local + tunnel (for recording the demo on your machine):**
+
+```bash
+docker-compose up --build                 # backend + slack client + DB
+cloudflared tunnel --url http://localhost:8000   # public HTTPS for the chart
+# set BACKEND_URL=https://<random>.trycloudflare.com in .env, restart slack_client
+```
+Without a public `BACKEND_URL`, the forecast still shows as native Block Kit
+fields — the chart image is simply omitted, never broken.
 
 ---
 
@@ -209,6 +230,31 @@ cd backend && python slack_client.py
 
 ---
 
+## Deployment (Render / Railway / Fly)
+
+**Why not Vercel?** The agent uses Slack **Socket Mode**, which holds a persistent
+websocket. Vercel serverless functions are short-lived and cannot keep that
+connection open. (If you must use Vercel, you would have to switch to HTTP Events
+mode and expose `/slack/events` — a different integration path this repo does not
+use.) Instead, deploy to a persistent host.
+
+The included [`render.yaml`](render.yaml) provisions **one** web service that hosts
+both:
+1. the FastAPI HTTP app (serves the public `/chart/forecast/{reagent}` PNG that
+   Slack image blocks fetch — needs public HTTPS), and
+2. the Socket Mode websocket, started in a background thread via
+   `RUN_SOCKET_MODE=1` (see [`backend/main.py`](backend/main.py) startup).
+
+```
+Render → New → Blueprint → select this repo → fill the secret env vars
+→ after first deploy, set BACKEND_URL=https://<service>.onrender.com → redeploy
+```
+
+Railway and Fly.io work identically with the same [`Dockerfile`](Dockerfile)
+(it honors the host-injected `$PORT`).
+
+---
+
 ## Project Structure
 
 ```
@@ -234,12 +280,19 @@ labops-agent/
 │   └── demo_script.md    # 3-minute demo script
 ├── scripts/
 │   ├── init_db.py        # Auto-seed PostgreSQL on Docker startup
-│   └── start_local.py    # One-script local startup (backend + slack + seed)
+│   ├── start_local.py    # One-script local startup (backend + slack + seed)
+│   ├── holdout_backtest.py   # Monthly hold-out backtest (illustrative)
+│   └── cross_validation.py   # Rolling-origin CV (headline accuracy metric)
+├── notebooks/
+│   ├── cv_metrics.json       # Rolling-origin CV results (real, reproducible)
+│   ├── holdout_metrics.json  # Monthly hold-out results (caveated)
+│   └── prophet_metrics.json  # Consolidated metrics summary
 ├── tests/
 │   ├── test_mcp.py       # MCP tool unit tests
 │   ├── test_prediction.py # Prophet engine tests
 │   └── test_integration.py # Bolt handler integration tests
 ├── models/               # Prophet serialized models (.pkl)
+├── render.yaml           # Render Blueprint (persistent host + Socket Mode)
 ├── docker-compose.yml    # One-click local stack
 ├── Dockerfile            # Backend container
 ├── Makefile              # make demo / make local / make test
