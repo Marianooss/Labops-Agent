@@ -8,14 +8,18 @@ Dual-mode:
 """
 import asyncio
 import json
+import logging
 import os
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 import database as db
 import prediction
+import blocks_loader as bl
 
 
 # ---------------------------------------------------------------------------
@@ -53,46 +57,20 @@ def create_order(reagent_name: str, quantity: float, supplier: str) -> Dict[str,
 
 
 def update_canvas(channel_id: str, reagent_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Update the Slack Canvas inventory document (payload prepared)."""
-    payload = {
-        "channel_id": channel_id,
-        "canvas_title": "LabOps Inventario — DEMO",
-        "blocks": [
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": f"Inventario actualizado — {reagent_data.get('reagent_name', 'N/A')}",
-                },
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": (
-                        f"*Reactivo:* `{reagent_data.get('reagent_name')}`\n"
-                        f"*Stock actual:* {reagent_data.get('current_stock')} unidades\n"
-                        f"*Última orden:* {reagent_data.get('last_order_status', 'N/A')}"
-                    ),
-                },
-            },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": ":warning: *DEMO* — datos sintéticos calibrados",
-                    }
-                ],
-            },
-        ],
-    }
+    """Update the Slack Canvas inventory document using blocks/canvas.json template."""
+    template = bl.load_template(
+        "canvas",
+        updated_at="just now",
+        reagent_name=reagent_data.get("reagent_name", "N/A"),
+        current_stock=reagent_data.get("current_stock", 0),
+        last_order_status=reagent_data.get("last_order_status", "N/A"),
+    )
     return {
         "tool": "update_canvas",
         "channel_id": channel_id,
-        "payload": payload,
+        "payload": template,
         "success": True,
-        "note": "Canvas payload prepared. Send via Slack Canvas API in production.",
+        "note": "Canvas payload prepared from blocks/canvas.json template. Send via Slack Canvas API.",
     }
 
 
@@ -207,4 +185,4 @@ if __name__ == "__main__":
     if run_mcp_server:
         asyncio.run(run_mcp_server())
     else:
-        print("[ERROR] MCP SDK not installed. Run: pip install mcp>=1.0.0")
+        logger.error("MCP SDK not installed. Run: pip install mcp>=1.0.0")

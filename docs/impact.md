@@ -45,20 +45,20 @@ react; they don't plan.
 ## Prediction Model — Verified Metrics
 
 **Dataset used for calibration:**
-- 414,289 B2B derivation records
-- Source: Argentine clinical laboratory network (anonymized)
+- Source: anonymized demand analysis of Argentine clinical laboratory operations
+- Method: demand patterns extracted from B2B clinical diagnostics network
 - Period: January 2025 — May 2026 (17 months)
 - Coverage: 14 provinces, 6+ top test types by volume
 
-**Top test types by volume (from dataset):**
-| Test | Annual volume (dataset) | Seasonal pattern |
+**Top test types by volume (from anonymized analysis):**
+| Test | Relative volume | Seasonal pattern |
 |---|---|---|
-| TSH / T4L | ~405,000 units | Winter spike (Jun-Aug) +80% |
-| Hemograma | ~188,000 units | Stable |
-| Glucemia | ~166,000 units | Stable (slight winter +5%) |
-| Vitamina D | ~160,000 units | Stable |
-| Uremia | ~158,000 units | Stable |
-| Ionograma | ~130,000 units | Stable |
+| TSH / T4L | Highest | Winter spike (Jun-Aug) +80% |
+| Hemograma | High | Stable |
+| Glucemia | Medium | Stable (slight winter +5%) |
+| Vitamina D | Medium | Stable |
+| Uremia | Medium | Stable |
+| Ionograma | Medium | Stable |
 
 **Model accuracy:**
 - Algorithm: Prophet (Facebook/Meta)

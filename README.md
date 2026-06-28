@@ -18,7 +18,7 @@ Clinical laboratories run on reagents. When a critical reagent runs out mid-oper
 
 ## What LabOps Agent Does
 
-1. **Predicts** stockouts using Prophet, calibrated on demand patterns from 414,289 B2B derivation records in Argentine clinical labs
+1. **Predicts** stockouts using Prophet, calibrated with patterns derived from anonymized demand analysis in Argentine clinical labs
 2. **Alerts** lab staff in `#labops-alerts` with interactive Block Kit messages — before the stockout happens
 3. **Acts** — staff orders reagents, assigns tasks, and updates inventory without leaving Slack
 
@@ -31,13 +31,13 @@ No existing product (Quartzy, Scispot, Benchling) combines:
 
 ---
 
-## Slack Technologies Used (All Three)
+## Technologies Used
 
-| Technology | How It's Used |
-|---|---|
-| **MCP Server** | Exposes 4 lab tools: `get_inventory`, `get_forecast`, `create_order`, `update_canvas` |
-| **Channel History API** | Searches #labops-alerts message history for past reagent incidents |
-| **Claude API Summarization** | Generates natural language summaries of reagent alert history |
+| Technology | How It's Used | Platform |
+|---|---|---|
+| **MCP Server** | Exposes 4 lab tools: `get_inventory`, `get_forecast`, `create_order`, `update_canvas` | Anthropic/Slack |
+| **Slack Channel History API** | Searches #labops-alerts message history for past reagent incidents | Slack |
+| **Claude API Summarization** | Generates natural language summaries of reagent alert history | Anthropic |
 
 ---
 
@@ -72,7 +72,7 @@ Tools available:
 │  ┌─────────────────┐   ┌──────────────────────────┐ │
 │  │   MCP SERVER    │   │   PREDICTION ENGINE      │ │
 │  │ get_inventory   │   │   Prophet + seasonality  │ │
-│  │ get_forecast    │   │   calibrated: 414K rows  │ │
+│  │ get_forecast    │   │   calibrated: synthetic patterns │ │
 │  │ create_order    │   │   84.3% cross-val accuracy │ │
 │  │ update_canvas   │   └──────────────────────────┘ │
 │  └─────────────────┘                                 │
@@ -151,9 +151,24 @@ cp .env.example .env
 6. Go to **OAuth & Permissions** → **Install to Workspace**
 7. Copy the **Bot User OAuth Token** and **App-Level Token** into your `.env`
 
-Manifest includes all required scopes: `chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`, `im:write`, `users:read`, `app_mentions:read`.
+Manifest includes all required scopes: `chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`, `im:write`, `users:read`, `app_mentions:read`, `canvases:read`, `canvases:write`.
 
-### 5. Run
+### 5. One-Click Docker Setup (recommended for judges)
+
+```bash
+# Clone and start everything (PostgreSQL + backend + auto-seed)
+git clone https://github.com/Marianooss/labops-agent
+cd labops-agent
+docker-compose up --build
+
+# Wait ~30s for DB init, then test:
+curl "http://localhost:8000/alert/trigger?reagent_name=TSH"
+```
+
+> This runs the full stack locally without needing a cloud Supabase account.
+> If you need Slack integration, set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in a `.env` file before running.
+
+### 6. Manual Setup (without Docker)
 
 ```bash
 # Terminal 1: FastAPI backend (run from backend/ directory)
@@ -181,20 +196,29 @@ labops-agent/
 │   ├── mcp_server.py     # MCP tools (4 lab tools)
 │   ├── prediction.py     # Prophet demand forecasting
 │   ├── slack_client.py   # Bolt Python + event handlers
-│   ├── database.py       # Supabase client
-│   └── claude_client.py  # Claude API wrapper
+│   ├── database.py       # Dual backend: Supabase or PostgreSQL
+│   ├── claude_client.py  # Claude API wrapper
+│   └── blocks_loader.py  # Block Kit / Canvas template loader
 ├── blocks/
-│   ├── alert.json        # Stockout alert Block Kit
-│   ├── modal_order.json  # Order reagent modal
+│   ├── alert.json        # Stockout alert Block Kit template
+│   ├── modal_order.json  # Order reagent modal template
 │   └── canvas.json       # Inventory canvas template
 ├── data/
-│   ├── create_tables.sql # Supabase schema
+│   ├── create_tables.sql # Database schema
 │   └── seed_data.sql     # Demo data (DEMO badge)
 ├── docs/
 │   ├── architecture.md   # Technical architecture
 │   ├── impact.md         # Impact metrics
 │   └── demo_script.md    # 3-minute demo script
+├── scripts/
+│   └── init_db.py        # Auto-seed PostgreSQL on Docker startup
+├── tests/
+│   ├── test_mcp.py       # MCP tool unit tests
+│   ├── test_prediction.py # Prophet engine tests
+│   └── test_integration.py # Bolt handler integration tests
 ├── models/               # Prophet serialized models (.pkl)
+├── docker-compose.yml    # One-click local stack
+├── Dockerfile            # Backend container
 ├── AGENTS.md             # Development operating system
 ├── BIBLE.md              # Immutable declarations
 └── CLAUDE.md             # Claude Code instructions
@@ -204,13 +228,13 @@ labops-agent/
 
 ## UiPath Components Used
 
-None — this project uses the **Slack platform** (MCP Server, Channel History API, Claude API) as the orchestration and agent layer.
+None — this project uses **Slack platform APIs** (Channel History API, Canvas API) for messaging and surfaces, **Anthropic MCP Server** for tool exposure, and **Claude API** for natural language generation.
 
 ---
 
 ## Data & Privacy
 
-All data in this project is **synthetic and clearly labeled with DEMO badges**. No real patient data, no PHI. The prediction model was calibrated using anonymized demand patterns from 414,289 B2B clinical lab derivation records in Argentina — the records themselves are not included in this repository.
+All data in this project is **synthetic and clearly labeled with DEMO badges**. No real patient data, no PHI. The prediction model was calibrated with patterns derived from anonymized demand analysis of Argentine clinical laboratories.
 
 ---
 

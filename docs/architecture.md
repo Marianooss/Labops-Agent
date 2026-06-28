@@ -7,9 +7,10 @@
 ## System Overview
 
 LabOps Agent is a Slack-native AI agent that predicts reagent stockouts
-in clinical laboratories before they happen. It runs on three Slack
-platform technologies (MCP Server, Channel History API, Claude API summarization)
-orchestrated via a FastAPI backend with Prophet demand forecasting.
+in clinical laboratories before they happen. It runs on Slack platform
+APIs (Channel History API, Canvas API) plus an Anthropic MCP Server and
+Claude API summarization, orchestrated via a FastAPI backend with Prophet
+demand forecasting.
 
 ---
 
@@ -53,7 +54,7 @@ orchestrated via a FastAPI backend with Prophet demand forecasting.
 │  │                                                          │    │
 │  │  Algorithm: Prophet (Facebook/Meta)                      │    │
 │  │  Training: synthetic data calibrated with real patterns  │    │
-│  │  Source: 414,289 B2B derivation records (Argentina)      │    │
+│  │  Source: anonymized demand analysis (Argentina)          │    │
 │  │  Accuracy: 84.3% cross-validation (MAPE 15.75%)          │    │
 │  │                                                          │    │
 │  │  Key patterns:                                           │    │
@@ -170,7 +171,11 @@ Prophet was chosen for its native handling of:
 - **Trend detection** — gradual growth or decline in test volumes
 
 **Calibration:**
-The model was trained on synthetic data calibrated with real demand patterns extracted from 414,289 B2B clinical laboratory derivation records. The synthetic data preserves the statistical patterns (seasonal multipliers, weekly rhythms, noise levels) without including any real patient or laboratory identifiers.
+The model was trained on synthetic data calibrated with demand patterns
+derived from anonymized analysis of Argentine clinical laboratory operations.
+The synthetic data preserves the statistical patterns (seasonal multipliers,
+weekly rhythms, noise levels) without including any real patient or
+laboratory identifiers.
 
 **Performance:**
 - 84.3% accuracy on cross-validation (MAPE 15.75%, RMSE 20.6 units)

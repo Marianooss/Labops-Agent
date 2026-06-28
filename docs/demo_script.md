@@ -89,8 +89,9 @@ Reactivo:    TSH                    [pre-filled, read-only]
 Cantidad:    [500] unidades          [suggested based on forecast]
 Proveedor:   [▼ LabSupplier AR  ]   [dropdown]
              LabSupplier AR
-             BioMed LATAM
-             DiagnosticPro
+             Bioquímica SA
+             LabMed Corp
+             Diagnósticos Plus
 
 [Cancelar]                    [✅ Confirmar Orden]
 ```
@@ -125,7 +126,7 @@ TSH · Stock: 680 · Última orden: pending
 
 ---
 
-### SEGMENT 4: Context from Slack AI (2:00–2:45)
+### SEGMENT 4: Context from Channel History + Claude AI (2:00–2:45)
 
 **[Action: Click "📊 Ver proyección" or ask the agent directly]**
 
@@ -134,7 +135,7 @@ Type in channel:
 @LabOps resumen de alertas recientes de TSH
 ```
 
-**[Screen: Slack AI summary appears in thread]**
+**[Screen: Claude AI summary appears in thread]**
 
 The agent responds with:
 ```
@@ -156,8 +157,8 @@ Fecha         Demanda proyectada    Banda
 
 **Narration:**
 > "The agent also surfaces 7-day demand forecasts with confidence bands.
-> And when you ask about recent history, Slack AI summarizes past
-> alerts in the channel — giving full context without leaving Slack."
+> And when you ask about recent history, Claude AI summarizes past
+> alerts from the channel history — giving full context without leaving Slack."
 
 ---
 
@@ -168,8 +169,8 @@ Fecha         Demanda proyectada    Banda
 **Narration:**
 > "LabOps Agent: predict, alert, act — all from Slack.
 >
-> Built on MCP Server, Real-Time Search API, and Slack AI.
-> Calibrated on 414,000 real clinical lab records from Argentina.
+> Built on MCP Server, Slack Channel History API, and Claude API.
+> Calibrated with patterns derived from anonymized demand analysis.
 >
 > For the 900 accredited labs in Argentina managing critical
 > reagents every day."
@@ -201,7 +202,7 @@ Fecha         Demanda proyectada    Banda
 **If Canvas doesn't update:**
 → Show the thread confirmation instead — it's equally valid
 
-**If Slack AI summary is slow:**
+**If Claude AI summary is slow:**
 → Skip segment 4 and go straight to segment 5 — demo still works
 
 ---

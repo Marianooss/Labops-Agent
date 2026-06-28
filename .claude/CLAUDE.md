@@ -27,7 +27,7 @@ Before writing or editing ANY code:
 ## 3. DECISION FILTER
 
 Every code change MUST improve at least one of the 4 judging criteria:
-1. **Technological Implementation** — MCP + RTS + Slack AI all used functionally
+1. **Technological Implementation** — MCP Server + Channel History API + Claude API summarization all used functionally
 2. **Design** — Block Kit interactive UX, not passive notifications
 3. **Potential Impact** — quantified lab operations improvement
 4. **Quality of the Idea** — uniqueness, no existing product does this
@@ -83,7 +83,7 @@ This flow is canonical for the hackathon video:
 - 0:00–0:45: Prediction — TSH stockout in 4 days
 - 0:45–1:30: Alert in #labops-alerts with 3 Block Kit buttons
 - 1:30–2:15: Order modal → confirm → Canvas auto-update
-- 2:15–3:00: Claude explains WHY + Slack AI summarizes history
+- 2:15–3:00: Claude explains WHY + Claude API summarizes channel history
 
 ## 10. CODE STYLE RULES
 
@@ -110,7 +110,7 @@ grep "prophet\|Prophet" backend/
 # → must appear in prediction engine
 
 # Slack tech referenced
-grep "bolt\|MCP\|rts" backend/ -r
+grep "bolt\|MCP\|channel" backend/ -r
 # → must appear in Slack integration layer
 ```
 

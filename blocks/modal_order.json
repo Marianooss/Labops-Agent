@@ -104,18 +104,26 @@
           {
             "text": {
               "type": "plain_text",
-              "text": "BioMed LATAM",
+              "text": "Bioquímica SA",
               "emoji": true
             },
-            "value": "BioMed LATAM"
+            "value": "Bioquimica SA"
           },
           {
             "text": {
               "type": "plain_text",
-              "text": "DiagnosticPro",
+              "text": "LabMed Corp",
               "emoji": true
             },
-            "value": "DiagnosticPro"
+            "value": "LabMed Corp"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Diagnósticos Plus",
+              "emoji": true
+            },
+            "value": "Diagnosticos Plus"
           }
         ]
       },

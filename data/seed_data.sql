@@ -1,6 +1,6 @@
 -- LabOps Agent — Seed Data for Supabase
 -- DEMO badge visible on all synthetic data.
--- Calibrated with patterns from 414,289 B2B derivation records (Argentina).
+-- Calibrated with patterns derived from anonymized demand analysis (Argentina).
 
 -- ⚠️ DEMO DATA — Synthetic, calibrated with real AR patterns. Not real lab data.
 -- Table: inventory

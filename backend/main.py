@@ -2,6 +2,7 @@
 main.py — FastAPI entry point for LabOps Agent.
 Exposes health check, MCP tools, prediction, and Slack event adapter.
 """
+import logging
 import os
 from typing import Dict, Any
 
@@ -14,6 +15,12 @@ import prediction
 import claude_client as claude
 import mcp_server as mcp
 from slack_client import bolt_app, _post_stockout_alert
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="LabOps Agent", version="1.0.0")
 slack_handler = SlackRequestHandler(bolt_app)
@@ -114,6 +121,7 @@ def api_trigger_alert(
         projected_days=proj["projected_stockout_days"],
         severity=proj["severity"],
         explanation=explanation,
+        current_stock=stock,
     )
 
     return {
@@ -141,4 +149,4 @@ def startup():
     try:
         db.get_supabase()
     except Exception as e:
-        print(f"[WARNING] Supabase not connected: {e}")
+        logger.warning("Supabase not connected: %s", e)

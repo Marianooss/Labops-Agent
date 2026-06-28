@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: labops
+      POSTGRES_PASSWORD: labops
+      POSTGRES_DB: labops
+    ports:
+      - "5432:5432"
+    volumes:
+      - labops_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U labops"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://labops:labops@db:5432/labops
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:-}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LABOPS_ALERTS_CHANNEL: ${LABOPS_ALERTS_CHANNEL:-#labops-alerts}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "python scripts/init_db.py &&
+             uvicorn backend.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  labops_pgdata:

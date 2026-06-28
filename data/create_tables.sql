@@ -40,3 +40,10 @@ CREATE TABLE IF NOT EXISTS alerts_log (
   created_at TIMESTAMPTZ DEFAULT now(),
   is_demo BOOLEAN DEFAULT true
 );
+
+CREATE TABLE IF NOT EXISTS lab_config (
+  id SERIAL PRIMARY KEY,
+  key TEXT NOT NULL UNIQUE,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);

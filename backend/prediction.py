@@ -1,6 +1,6 @@
 """
 prediction.py — Prophet demand forecasting + stockout calculation.
-Calibrated with patterns from 414,289 B2B derivation records (Argentina).
+Calibrated with patterns derived from anonymized demand analysis (Argentina).
 """
 import os
 import pickle
