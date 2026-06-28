@@ -1,0 +1,39 @@
+{
+  "type": "canvas",
+  "title": "LabOps Inventario — DEMO",
+  "blocks": [
+    {
+      "type": "header",
+      "text": {
+        "type": "plain_text",
+        "text": "Inventario de Reactivos"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Última actualización: {{updated_at}}"
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Reactivo:* `{{reagent_name}}`\n*Stock actual:* {{current_stock}} unidades\n*Última orden:* {{last_order_status}}"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": ":warning: *DEMO* — datos sintéticos calibrados con patrones reales de Argentina"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "type": "modal",
+  "callback_id": "order_modal",
+  "title": {
+    "type": "plain_text",
+    "text": "Ordenar Reactivo",
+    "emoji": true
+  },
+  "submit": {
+    "type": "plain_text",
+    "text": "✅ Confirmar Orden",
+    "emoji": true
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Cancelar",
+    "emoji": true
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🔬 *DEMO* — Orden de reactivo. Datos sintéticos."
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "reagent_block",
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "reagent_name",
+        "initial_value": "{{reagent_name}}",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Nombre del reactivo"
+        }
+      },
+      "label": {
+        "type": "plain_text",
+        "text": "Reactivo",
+        "emoji": true
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Pre-cargado desde la alerta"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "quantity_block",
+      "element": {
+        "type": "number_input",
+        "action_id": "quantity",
+        "is_decimal_allowed": false,
+        "initial_value": "{{suggested_quantity}}",
+        "min_value": "1",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Cantidad a ordenar"
+        }
+      },
+      "label": {
+        "type": "plain_text",
+        "text": "Cantidad (unidades)",
+        "emoji": true
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Sugerido por el modelo de demanda"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "supplier_block",
+      "element": {
+        "type": "static_select",
+        "action_id": "supplier",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Seleccionar proveedor",
+          "emoji": true
+        },
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "LabSupplier AR",
+            "emoji": true
+          },
+          "value": "LabSupplier AR"
+        },
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "LabSupplier AR",
+              "emoji": true
+            },
+            "value": "LabSupplier AR"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "BioMed LATAM",
+              "emoji": true
+            },
+            "value": "BioMed LATAM"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "DiagnosticPro",
+              "emoji": true
+            },
+            "value": "DiagnosticPro"
+          }
+        ]
+      },
+      "label": {
+        "type": "plain_text",
+        "text": "Proveedor",
+        "emoji": true
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "La orden se registrará en el sistema y se actualizará el Canvas de inventario."
+        }
+      ]
+    }
+  ]
+}

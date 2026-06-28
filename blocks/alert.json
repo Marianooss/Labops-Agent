@@ -1,0 +1,90 @@
+{
+  "blocks": [
+    {
+      "type": "header",
+      "text": {
+        "type": "plain_text",
+        "text": "🔴 CRÍTICO — {{reagent_name}}",
+        "emoji": true
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {
+          "type": "mrkdwn",
+          "text": "*Reactivo:*\n`{{reagent_name}}`"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Severidad:*\n🔴 CRÍTICO"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Stock actual:*\n{{current_stock}} unidades"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Stockout proyectado:*\n~{{projected_days}} días"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*¿Por qué?*\n{{explanation}}"
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "📊 Ver proyección",
+            "emoji": true
+          },
+          "value": "{{reagent_name}}",
+          "action_id": "view_forecast",
+          "style": "default"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "🛒 Ordenar reactivo",
+            "emoji": true
+          },
+          "value": "{{reagent_name}}",
+          "action_id": "order_reagent",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "👤 Asignar al equipo",
+            "emoji": true
+          },
+          "value": "{{reagent_name}}",
+          "action_id": "assign_team",
+          "style": "default"
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "🔬 *DEMO* — datos sintéticos calibrados con patrones reales AR · LabOps Agent"
+        }
+      ]
+    }
+  ]
+}
