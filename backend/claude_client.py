@@ -53,7 +53,7 @@ def summarize_messages(
         )
         content = message.content
         if isinstance(content, list) and len(content) > 0:
-            return str(content[0])
+            return content[0].text
         return str(content)
     except Exception:
         return (
@@ -99,7 +99,7 @@ def explain_stockout(
 
         content = message.content
         if isinstance(content, list) and len(content) > 0:
-            return str(content[0])
+            return content[0].text
         return str(content)
     except Exception:
         # Graceful fallback when API key is invalid/dummy

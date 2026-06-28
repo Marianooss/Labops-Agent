@@ -36,7 +36,8 @@ No existing product (Quartzy, Scispot, Benchling) combines:
 | Technology | How It's Used | Platform |
 |---|---|---|
 | **MCP Server** | Exposes 4 lab tools: `get_inventory`, `get_forecast`, `create_order`, `update_canvas` | Anthropic/Slack |
-| **Slack Search API** | Real-time workspace search for reagent mentions across channels (`search.messages`) | Slack |
+| **Claude Tool-Use Agent** | LLM selects and invokes MCP tools via `agent_router.py` on every @mention | Anthropic |
+| **Slack Search API** | Real-time workspace search for reagent mentions across channels (`search.messages`) — requires user token | Slack |
 | **Slack Channel History API** | Queries #labops-alerts message history for past reagent incidents | Slack |
 | **Claude API Summarization** | Generates natural language summaries of reagent alert history | Anthropic |
 
@@ -142,7 +143,8 @@ pip install -r requirements.txt
 cp .env.example .env
 # Fill in your keys:
 # SUPABASE_URL, SUPABASE_KEY
-# SLACK_BOT_TOKEN, SLACK_APP_TOKEN
+# SLACK_BOT_TOKEN, SLACK_APP_TOKEN, SLACK_SIGNING_SECRET
+# SLACK_USER_TOKEN (optional — required for search.messages)
 # ANTHROPIC_API_KEY
 # LABOPS_ALERTS_CHANNEL=#labops-alerts
 ```
@@ -254,6 +256,19 @@ None — this project uses **Slack platform APIs** (Channel History API, Canvas 
 
 ---
 
+## Demo Screenshots
+
+Record the ≤3-minute demo in your live Slack sandbox and replace these placeholders:
+
+| Timestamp | Screenshot | What to capture |
+|---|---|---|
+| 0:00-0:45 | `docs/demo/01_alert.png` | TSH alert in `#labops-alerts` with 🔴 CRITICAL badge + 3 buttons |
+| 0:45-1:30 | `docs/demo/02_forecast.png` | Thread reply: 7-day Prophet forecast table + channel history |
+| 1:30-2:15 | `docs/demo/03_order.png` | Modal "Ordenar reactivo" → confirmation → Canvas update |
+| 2:15-3:00 | `docs/demo/04_agent.png` | @mention interaction showing agent tool-use (e.g. `@LabOps Agent cuánto stock hay de TSH?`) |
+
+> 💡 **Tip:** Use Slack's built-in screen recording (Cmd+Shift+5 on macOS, Win+Alt+R on Windows) or Loom for the GIF.
+
 ## Data & Privacy
 
 All data in this project is **synthetic and clearly labeled with DEMO badges**. No real patient data, no PHI. The prediction model was calibrated with patterns derived from anonymized demand analysis of Argentine clinical laboratories.
@@ -270,7 +285,7 @@ MIT License — see [LICENSE](LICENSE)
 
 **Mariano Adrian Oss** · [DevelopOss](https://developoss.com) · Buenos Aires, Argentina
 
-B2B KAM in clinical diagnostics (4 years) + AI Builder. This project applies real insider knowledge of clinical laboratory operations to a problem that existing software hasn't solved: predictive reagent management inside the tools labs already use daily.
+B2B KAM in clinical diagnostics (4 years) + AI Builder. This project applies real insider knowledge of clinical laboratory operations to a problem that existing software hasn't solved: uninterrupted diagnostic access for vulnerable patients inside the tools labs already use daily.
 
 ---
 

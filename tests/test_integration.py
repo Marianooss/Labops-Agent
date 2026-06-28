@@ -182,11 +182,31 @@ class TestAssignTeamSubmission(unittest.TestCase):
 
 
 class TestAppMention(unittest.TestCase):
-    """App mention handler — onboarding and summarization"""
+    """App mention handler — agent router with Claude tool-use"""
 
-    @patch("slack_client.claude.summarize_messages")
-    def test_summary_mode_calls_claude(self, mock_summarize):
-        mock_summarize.return_value = "TSH has been stable."
+    @patch("slack_client.agent_router.run_agent")
+    def test_agent_router_called_on_mention(self, mock_run_agent):
+        mock_run_agent.return_value = "TSH stock: 680 units. Projected stockout in 4 days."
+
+        event = {
+            "text": "@labops cuánto stock hay de TSH?",
+            "user": "U123",
+            "channel": "C123",
+        }
+        say = MagicMock()
+        client = MagicMock()
+
+        handle_app_mention(event, say, client)
+
+        mock_run_agent.assert_called_once()
+        say.assert_called_once()
+        text = str(say.call_args)
+        self.assertIn("LabOps Agent", text)
+        self.assertIn("680 units", text)
+
+    @patch("slack_client.agent_router.run_agent")
+    def test_agent_router_handles_resumen(self, mock_run_agent):
+        mock_run_agent.return_value = "TSH ha estado estable las últimas semanas."
 
         event = {
             "text": "@labops resumen TSH",
@@ -195,26 +215,10 @@ class TestAppMention(unittest.TestCase):
         }
         say = MagicMock()
         client = MagicMock()
-        client.conversations_history.return_value = {"messages": [{"text": "old alert"}]}
 
         handle_app_mention(event, say, client)
 
-        mock_summarize.assert_called_once()
-        say.assert_called_once()
-        blocks = say.call_args[1]["blocks"]
-        self.assertTrue(any("Resumen IA" in str(b) for b in blocks))
-
-    def test_default_onboarding(self):
-        event = {
-            "text": "@labops hello",
-            "user": "U123",
-            "channel": "C123",
-        }
-        say = MagicMock()
-        client = MagicMock()
-
-        handle_app_mention(event, say, client)
-
+        mock_run_agent.assert_called_once()
         say.assert_called_once()
         text = str(say.call_args)
         self.assertIn("LabOps Agent", text)

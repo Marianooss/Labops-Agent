@@ -27,10 +27,12 @@ import prediction
 import claude_client as claude
 import mcp_server as mcp
 import blocks_loader as bl
+import agent_router
 
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "")
 SLACK_APP_TOKEN = os.environ.get("SLACK_APP_TOKEN", "")
 SLACK_SIGNING_SECRET = os.environ.get("SLACK_SIGNING_SECRET", "")
+SLACK_USER_TOKEN = os.environ.get("SLACK_USER_TOKEN", "")
 LABOPS_ALERTS_CHANNEL = os.environ.get("LABOPS_ALERTS_CHANNEL", "#labops-alerts")
 
 ENV = os.environ.get("ENV", "production")
@@ -356,14 +358,27 @@ def handle_view_forecast(ack, body, client):
         # -------------------------------------------------------------------
         # TASK 2 — Slack Real-Time Search API (search.messages)
         # -------------------------------------------------------------------
+        # search.messages requires a USER token (xoxp-).
+        # If SLACK_USER_TOKEN is set, we use it; otherwise the bot token
+        # returns empty results gracefully.
         search_text = ""
         try:
-            search_result = client.search_messages(
-                query=f"{reagent} in:labops-alerts",
-                count=5,
-                sort="timestamp",
-                sort_dir="desc",
-            )
+            if SLACK_USER_TOKEN:
+                from slack_sdk import WebClient
+                user_client = WebClient(token=SLACK_USER_TOKEN)
+                search_result = user_client.search_messages(
+                    query=f"{reagent} in:labops-alerts",
+                    count=5,
+                    sort="timestamp",
+                    sort_dir="desc",
+                )
+            else:
+                search_result = client.search_messages(
+                    query=f"{reagent} in:labops-alerts",
+                    count=5,
+                    sort="timestamp",
+                    sort_dir="desc",
+                )
             matches = search_result.get("messages", {}).get("matches", [])
             if matches:
                 search_lines = []
@@ -381,7 +396,7 @@ def handle_view_forecast(ack, body, client):
                 search_text = f"*🔍 Sin resultados de búsqueda para `{reagent}` en el workspace.*"
         except Exception as e:
             logger.error("Search messages failed: %s", e, exc_info=True)
-            search_text = f"*🔍 No se pudo ejecutar búsqueda: {str(e)} (verificá scope `search:read`).*"
+            search_text = f"*🔍 No se pudo ejecutar búsqueda: {str(e)} (verificá scope `search:read` y token de usuario).*"
 
         client.chat_postMessage(
             channel=channel,
@@ -621,89 +636,163 @@ def handle_assign_team_submission(ack, body, client):
 
 
 # ---------------------------------------------------------------------------
-# App mention handler (onboarding)
+# App mention handler — agent router with Claude tool-use
 # ---------------------------------------------------------------------------
 @bolt_app.event("app_mention")
 def handle_app_mention(event, say, client):
-    text = event.get("text", "").lower()
+    text = event.get("text", "")
     user = event.get("user", "")
     channel = event.get("channel", "")
+    logger.info("app_mention from %s in %s: %s", user, channel, text[:80])
+
     try:
-        # Detect reagent name from mention
-        reagent = "TSH"
-        for candidate in ["tsh", "glucose", "hba1c", "lipid", "creatinine"]:
-            if candidate in text:
-                reagent = candidate.upper()
-                break
-        logger.info("app_mention from %s in %s: %s", user, channel, text[:50])
+        # Strip the bot mention from text so Claude doesn't get confused
+        clean_text = re.sub(r"<@\w+>", "", text).strip()
+        if not clean_text:
+            clean_text = "¿Cómo estás?"
 
-        # -------------------------------------------------------------------
-        # TASK 2 — Claude API summarization of channel history
-        # -------------------------------------------------------------------
-        if "resumen" in text or "summary" in text or "summarize" in text:
-            try:
-                history = client.conversations_history(channel=channel, limit=10)
-                messages = [
-                    m.get("text", "")
-                    for m in history.get("messages", [])
-                    if m.get("text")
-                ]
-                summary = claude.summarize_messages(messages, reagent)
-                say(
-                    blocks=[
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": f"🤖 *Resumen IA de `{reagent}`:*\n{summary}",
-                            },
-                        },
-                        _demo_badge(),
-                    ],
-                    text=f"Resumen IA {reagent}",
-                )
-            except Exception as e:
-                logger.error("Claude summarization failed: %s", e, exc_info=True)
-                say(
-                    blocks=[
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": (
-                                    f"🤖 *Resumen IA:* No pude acceder al historial del canal. "
-                                    f"Error: `{str(e)}`. Verificá que la app tenga el scope `channels:history`."
-                                ),
-                            },
-                        },
-                        _demo_badge(),
-                    ],
-                    text="Error resumen IA",
-                )
-            return
+        # Run the agent loop — Claude decides which MCP tool to call
+        agent_response = agent_router.run_agent(
+            user_message=clean_text,
+            channel_id=channel,
+        )
 
-        # Default onboarding response
         say(
             blocks=[
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": (
-                            f"Hola <@{user}>! Soy *LabOps Agent*.\n"
-                            "Te alerto *antes* de que un reactivo se agote.\n\n"
-                            "*Comandos:*\n"
-                            f"• `@LabOps Agent {reagent}` → pronóstico de stock\n"
-                            f"• `@LabOps Agent resumen {reagent}` → resumen IA del canal"
-                        ),
+                        "text": f"🤖 *LabOps Agent:*\n{agent_response}",
                     },
                 },
                 _demo_badge(),
             ],
-            text="LabOps Agent onboarding",
+            text="LabOps Agent response",
         )
     except Exception as exc:
         logger.error("handle_app_mention failed: %s", exc, exc_info=True)
+        say(
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"❌ Error del agente: `{str(exc)}`",
+                    },
+                },
+                _demo_badge(),
+            ],
+            text="Error del agente",
+        )
+
+
+# ---------------------------------------------------------------------------
+# App Home dashboard
+# ---------------------------------------------------------------------------
+@bolt_app.event("app_home_opened")
+def handle_app_home_opened(event, client):
+    user_id = event.get("user", "")
+    try:
+        # Fetch live data
+        inventory = db.get_inventory()
+        alerts = db.get_alerts(limit=5)
+        orders = db.get_orders(status="pending")
+
+        # Build inventory rows
+        inv_rows = []
+        for item in inventory[:6]:
+            r = item["reagent_name"]
+            stock = item["current_stock"]
+            crit = item.get("criticality", "medium")
+            emoji = "🔴" if crit == "critical" else "🟡" if crit == "high" else "🟢"
+            inv_rows.append(f"{emoji} *{r}* — {stock} u.")
+
+        # Build alert rows
+        alert_rows = []
+        for alert in alerts[:3]:
+            r = alert["reagent_name"]
+            sev = alert.get("severity", "warning")
+            emoji = "🔴" if sev == "critical" else "🟡"
+            alert_rows.append(f"{emoji} `{r}` — stockout {alert.get('predicted_stockout_date', 'N/A')}")
+        if not alert_rows:
+            alert_rows.append("✅ Sin alertas activas")
+
+        # Build order rows
+        order_rows = []
+        for order in orders[:3]:
+            r = order["reagent_name"]
+            qty = order["quantity"]
+            order_rows.append(f"🛒 `{r}` x{qty} — {order.get('status', 'pending')}")
+        if not order_rows:
+            order_rows.append("📭 Sin órdenes pendientes")
+
+        client.views_publish(
+            user_id=user_id,
+            view={
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {"type": "plain_text", "text": "🏠 LabOps Agent — Dashboard"},
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": (
+                                "*Estado del agente:* 🟢 Activo\n"
+                                "*Último modelo:* Prophet (temperature=0)\n"
+                                "*Canal de alertas:* " + LABOPS_ALERTS_CHANNEL
+                            ),
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*📋 Inventario*\n" + "\n".join(inv_rows),
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*🔔 Alertas recientes*\n" + "\n".join(alert_rows),
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*🛒 Órdenes pendientes*\n" + "\n".join(order_rows),
+                        },
+                    },
+                    _demo_badge(),
+                ],
+            },
+        )
+    except Exception as exc:
+        logger.error("handle_app_home_opened failed: %s", exc, exc_info=True)
+        client.views_publish(
+            user_id=user_id,
+            view={
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"⚠️ No se pudo cargar el dashboard: `{str(exc)}`",
+                        },
+                    },
+                    _demo_badge(),
+                ],
+            },
+        )
 
 
 # ---------------------------------------------------------------------------

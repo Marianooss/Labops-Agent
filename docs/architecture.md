@@ -120,10 +120,16 @@ Returns: past alerts, orders placed, resolutions
 When a user clicks "📊 Ver proyección", the agent runs a real-time search for the reagent across all accessible channels (not just `#labops-alerts`). This surfaces relevant conversations, past alerts, and team discussions that may not be in the immediate channel history.
 
 ```
-Scopes used: search:read
+Scopes used: search:read (bot) + search:read (user token required for search.messages)
 Query method: client.search_messages(query="TSH in:labops-alerts", count=5)
 Returns: cross-channel matches with timestamps and snippets
 ```
+
+> ⚠️ **Limitation:** `search.messages` requires a **user token** (`xoxp-`) to return results.
+> The bot token (`search:read` bot scope) receives empty results in standard workspaces.
+> The app includes graceful fallback messaging when search is unavailable.
+> For full search functionality, a workspace admin must generate a user token
+> and set `SLACK_USER_TOKEN` in the environment.
 
 ### 4. Claude API Summarization
 **What it does:** Uses Claude API to summarize `#labops-alerts` channel history on demand.
@@ -189,7 +195,12 @@ weekly rhythms, noise levels) without including any real patient or
 laboratory identifiers.
 
 **Performance:**
-- 84.3% accuracy on cross-validation (MAPE 15.75%, RMSE 20.6 units)
+- Self-consistency on synthetic daily data: MAPE 15.75%, RMSE 20.6 units
+  *(Relabeled — this is the model tested on its own synthetic training data.)*
+- **Honest hold-out backtest** (train 2024-2025 monthly data → predict 2026):
+  - TSH: MAPE **3.29%** (MAE 5.28, RMSE 7.04, 7 test points)
+  - Hemograma: MAPE 4.62% (MAE 9.70, 1 test point)
+  - Ionograma: MAPE 7.45% (MAE 13.78, 1 test point)
 - Critical flags (stockout within lead time): 100% reproducible at temperature=0
 - Model serialized to `models/{reagent}_model.pkl` after first fit (~10-30s)
 - Subsequent calls load from disk (<100ms)
@@ -215,7 +226,7 @@ laboratory identifiers.
 | Prediction | Prophet | 1.1.5 |
 | Database | Supabase (PostgreSQL) | — |
 | LLM | Claude API (claude-sonnet-4-6) | — |
-| Deploy | Vercel | — |
+| Deploy | Docker + Socket Mode (local) / Heroku / Render (cloud) | Socket Mode for real-time events |
 | Language | Python | 3.11+ |
 
 ---

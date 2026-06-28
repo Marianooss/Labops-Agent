@@ -1,14 +1,40 @@
 {
-  "reagent": "TSH",
-  "history_days": 365,
-  "cv_initial": "180 days",
-  "cv_period": "30 days",
-  "cv_horizon": "14 days",
-  "mae": 16.51,
-  "rmse": 20.6,
-  "mape": 0.1575,
-  "mape_percent": 15.75,
-  "coverage": 0.609,
-  "calibrated": true,
-  "note": "DEMO \u2014 synthetic data calibrated with real demand patterns"
+  "model": "Prophet (Facebook/Meta)",
+  "temperature": 0,
+  "self_consistency_on_synthetic_daily": {
+    "reagent": "TSH",
+    "history_days": 365,
+    "method": "Prophet cross-validation on 365-day synthetic daily data",
+    "mae": 16.51,
+    "rmse": 20.6,
+    "mape_percent": 15.75,
+    "coverage": 0.609,
+    "note": "Self-consistency check on synthetic daily data. Not a true hold-out test."
+  },
+  "honest_holdout_backtest": {
+    "source": "notebooks/holdout_metrics.json",
+    "method": "Train on 2024-2025 seeded monthly data, predict 2026 hold-out",
+    "TSH": {
+      "train_samples": 24,
+      "test_samples": 7,
+      "mae": 5.28,
+      "rmse": 7.04,
+      "mape_percent": 3.29
+    },
+    "Hemograma": {
+      "train_samples": 10,
+      "test_samples": 1,
+      "mae": 9.7,
+      "rmse": 9.7,
+      "mape_percent": 4.62
+    },
+    "Ionograma": {
+      "train_samples": 10,
+      "test_samples": 1,
+      "mae": 13.78,
+      "rmse": 13.78,
+      "mape_percent": 7.45
+    },
+    "note": "DEMO — synthetic monthly data calibrated with real AR demand patterns. Conservative Prophet settings (flat growth, changepoint_prior_scale=0.001) used for sparse reagents to prevent trend extrapolation."
+  }
 }

@@ -5,6 +5,17 @@
 
 ---
 
+## Patient Impact
+
+When a clinical lab runs out of TSH reagent, patients cannot 
+be diagnosed. In Argentina, undiagnosed hypothyroidism affects 
+~2% of the population — disproportionately pregnant women and 
+elderly patients who depend on public health labs.
+LabOps Agent prevents the operational failure that causes 
+these diagnostic gaps.
+
+---
+
 ## The Problem — Quantified
 
 Clinical laboratory reagent stockouts are a documented operational
@@ -62,7 +73,15 @@ react; they don't plan.
 
 **Model accuracy:**
 - Algorithm: Prophet (Facebook/Meta)
-- Cross-validation accuracy: 84.3% (MAPE 15.75%, RMSE 20.6 units)
+- Self-consistency on synthetic daily data: MAPE 15.75%, RMSE 20.6 units
+  *(This is model self-consistency on its own synthetic training data —
+  not a true out-of-sample test. Relabeled for honesty.)*
+- **Honest hold-out backtest** (train 2024-2025 monthly data → predict 2026):
+  | Reagent | Train | Test | MAE | RMSE | MAPE |
+  |---------|-------|------|-----|------|------|
+  | TSH | 24 | 7 | 5.28 | 7.04 | **3.29%** |
+  | Hemograma | 10 | 1 | 9.70 | 9.70 | 4.62% |
+  | Ionograma | 10 | 1 | 13.78 | 13.78 | 7.45% |
 - Critical stockout flags: 100% reproducible at temperature=0
 - Secondary flags: 13-14/run variance (documented in ADR-007)
 
