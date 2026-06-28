@@ -133,6 +133,57 @@ def api_trigger_alert(
 
 
 # ---------------------------------------------------------------------------
+# Forecast chart (PNG) — embedded in Block Kit messages
+# ---------------------------------------------------------------------------
+from io import BytesIO
+from fastapi.responses import StreamingResponse
+
+try:
+    import matplotlib
+    matplotlib.use("Agg")  # headless backend
+    import matplotlib.pyplot as plt
+    _matplotlib_available = True
+except ImportError:
+    _matplotlib_available = False
+    logger.warning("matplotlib not installed. Forecast charts disabled.")
+
+
+@app.get("/chart/forecast/{reagent_name}")
+def api_forecast_chart(reagent_name: str, days: int = 14):
+    if not _matplotlib_available:
+        return JSONResponse({"error": "matplotlib not installed"}, status_code=503)
+
+    try:
+        forecast = prediction.get_forecast(reagent_name, days=days)
+        daily = forecast["daily_demand"]
+        dates = [d["date"] for d in daily]
+        yhat = [d["predicted_qty"] for d in daily]
+        lower = [d["lower_bound"] for d in daily]
+        upper = [d["upper_bound"] for d in daily]
+
+        fig, ax = plt.subplots(figsize=(6, 3), dpi=100)
+        ax.fill_between(dates, lower, upper, color="#0F6B45", alpha=0.15, label="80% CI")
+        ax.plot(dates, yhat, color="#0F6B45", linewidth=2, marker="o", markersize=3, label="Predicted")
+        ax.set_title(f"Demand Forecast — {reagent_name}", fontsize=11, fontweight="bold")
+        ax.set_ylabel("Units / day")
+        ax.set_xlabel("Date")
+        ax.tick_params(axis="x", rotation=30, labelsize=7)
+        ax.legend(loc="upper left", fontsize=8)
+        ax.grid(True, alpha=0.3)
+        fig.tight_layout()
+
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        buf.seek(0)
+        plt.close(fig)
+
+        return StreamingResponse(buf, media_type="image/png")
+    except Exception as e:
+        logger.error("Chart generation failed: %s", e, exc_info=True)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ---------------------------------------------------------------------------
 # Slack Events adapter
 # ---------------------------------------------------------------------------
 @app.post("/slack/events")

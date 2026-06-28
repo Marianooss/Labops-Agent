@@ -61,9 +61,12 @@ class TestViewForecast(unittest.TestCase):
 
         handle_view_forecast(ack, body, client)
 
-        # Should post forecast table
+        # Should post forecast table with embedded chart image
         calls = client.chat_postMessage.call_args_list
         self.assertTrue(any("Pronóstico" in str(c) for c in calls))
+        forecast_call = [c for c in calls if "Pronóstico" in str(c)][0]
+        blocks = forecast_call[1]["blocks"]
+        self.assertTrue(any(b.get("type") == "image" for b in blocks))
         # Should post channel history summary (either with alerts or empty state)
         self.assertTrue(any("alerta" in str(c).lower() for c in calls))
         # Should post workspace search results
@@ -222,6 +225,47 @@ class TestAppMention(unittest.TestCase):
         say.assert_called_once()
         text = str(say.call_args)
         self.assertIn("LabOps Agent", text)
+
+
+class TestSearchMessages(unittest.TestCase):
+    """search.messages uses SLACK_USER_TOKEN when available"""
+
+    @patch("slack_sdk.WebClient")
+    @patch("slack_client.SLACK_USER_TOKEN", "xoxp-test-user-token")
+    @patch.dict(os.environ, {"LABOPS_ALERTS_CHANNEL_ID": "C456"})
+    def test_user_token_used_for_search(self, mock_webclient_cls):
+        mock_user_client = MagicMock()
+        mock_user_client.search_messages.return_value = {
+            "messages": {
+                "matches": [
+                    {"text": "TSH low", "ts": "123.456", "channel": {"name": "labops-alerts"}},
+                ]
+            }
+        }
+        mock_webclient_cls.return_value = mock_user_client
+
+        mock_get_forecast = MagicMock()
+        mock_get_forecast.return_value = {
+            "daily_demand": [
+                {"date": "2026-06-27", "predicted_qty": 200, "lower_bound": 180, "upper_bound": 220},
+            ]
+        }
+
+        with patch("slack_client.prediction.get_forecast", mock_get_forecast):
+            with patch("slack_client.db.get_lab_config", return_value=None):
+                ack = FakeAck()
+                client = MagicMock()
+                client.conversations_history.return_value = {"messages": []}
+                body = {
+                    "actions": [{"value": "TSH"}],
+                    "channel": {"id": "C123"},
+                    "message": {"ts": "1234567890.123456"},
+                }
+                handle_view_forecast(ack, body, client)
+
+        # User client should have been created with the user token
+        mock_webclient_cls.assert_called_once_with(token="xoxp-test-user-token")
+        mock_user_client.search_messages.assert_called_once()
 
 
 if __name__ == "__main__":

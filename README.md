@@ -74,8 +74,8 @@ Tools available:
 │  ┌─────────────────┐   ┌──────────────────────────┐ │
 │  │   MCP SERVER    │   │   PREDICTION ENGINE      │ │
 │  │ get_inventory   │   │   Prophet + seasonality  │ │
-│  │ get_forecast    │   │   calibrated: synthetic patterns │ │
-│  │ create_order    │   │   84.3% cross-val accuracy │ │
+│  │ get_forecast    │   │   calibrated: synthetic  │ │
+│  │ create_order    │   │   hold-out MAPE 3-7%     │ │
 │  │ update_canvas   │   └──────────────────────────┘ │
 │  └─────────────────┘                                 │
 └─────────────────────────────────┬───────────────────┘

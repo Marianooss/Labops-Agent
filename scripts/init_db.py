@@ -51,6 +51,38 @@ def _run_file(cursor, filepath: str, ignore_duplicates: bool = False):
             raise
 
 
+def _seed_daily_tsh(cursor):
+    """Generate 90 days of deterministic daily TSH data for reproducible demos.
+    This ensures Prophet trains on daily granularity (same as synthetic fallback)."""
+    import numpy as np
+    from datetime import datetime, timedelta, timezone
+
+    np.random.seed(42)
+    base = 120
+    winter_mult = 1.8
+    winter_months = [6, 7, 8]
+    today = datetime.now(timezone.utc).date()
+
+    # Delete existing monthly TSH demand_history to avoid duplicate dates
+    cursor.execute("DELETE FROM demand_history WHERE reagent_name = 'TSH'")
+
+    values = []
+    for i in range(90, 0, -1):
+        d = today - timedelta(days=i)
+        mult = winter_mult if d.month in winter_months else 1.0
+        noise = np.random.normal(0, base * 0.08)
+        weekend_mult = 0.6 if d.weekday() >= 5 else 1.0
+        qty = max(0, int(base * mult * weekend_mult + noise))
+        values.append(f"('TSH', '{d}', {qty}, 'TSH', true)")
+
+    sql = (
+        "INSERT INTO demand_history (reagent_name, date, quantity, test_type, is_demo) VALUES "
+        + ", ".join(values)
+    )
+    cursor.execute(sql)
+    print(f"Inserted {len(values)} daily TSH demand records.")
+
+
 def main():
     conn = _connect()
     cursor = conn.cursor()
@@ -61,6 +93,10 @@ def main():
 
     print("Running seed_data.sql (idempotent) ...")
     _run_file(cursor, os.path.join(SQL_DIR, "seed_data.sql"), ignore_duplicates=True)
+    conn.commit()
+
+    print("Seeding daily TSH data for deterministic Prophet training ...")
+    _seed_daily_tsh(cursor)
     conn.commit()
 
     cursor.close()

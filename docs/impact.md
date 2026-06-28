@@ -103,7 +103,10 @@ react; they don't plan.
 **Across 200 labs (minimum viable market):**
 - Stockouts prevented: ~1,200-1,800 per year
 - Diagnostic interruptions avoided: ~15,000-25,000 tests per year
-- Total time saved: 400-600 hours/week across the network
+- Time saved: ~2-3 hours/week per lab on manual stock checks and reactive ordering coordination
+  *(Based on: 4 years of field observation in clinical diagnostics operations, Argentina.
+  Conservative estimate: 15-20 min/day × 5 days = 1.25-1.7 hrs/week baseline;
+  reactive ordering adds ~1 hr/week when stockouts occur.)*
 
 **Patient impact:**
 Each prevented stockout = uninterrupted diagnostic workflow.
@@ -154,7 +157,7 @@ No product in the Slack Marketplace combines:
 | Metric | Target | How Measured |
 |---|---|---|
 | Stockout reduction | 40%+ | Compare stockout events before/after |
-| Alert accuracy | 84.3%+ | Predicted stockout vs actual stockout (MAPE 15.75%) |
+| Alert accuracy | Hold-out MAPE 3-7% | Train 2024-2025 monthly → predict 2026 (TSH 3.29%, Hemograma 4.62%, Ionograma 7.45%) |
 | Time-to-order | <5 min | From alert to confirmed order in Slack |
 | Lab adoption | 5 pilots in 90 days | Active sandbox installations |
 

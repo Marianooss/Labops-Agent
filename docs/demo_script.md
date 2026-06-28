@@ -41,7 +41,7 @@ Before recording:
 **[Action: Run the alert trigger]**
 
 ```bash
-curl "http://localhost:8000/alert/trigger?reagent=TSH&channel=labops-alerts"
+curl "http://localhost:8000/alert/trigger?reagent_name=TSH&channel=labops-alerts"
 ```
 
 **[Screen: Watch the Block Kit alert appear in #labops-alerts]**
@@ -85,7 +85,7 @@ The modal shows:
 Ordenar Reactivo
 
 Reactivo:    TSH                    [pre-filled, read-only]
-Cantidad:    [500] unidades          [suggested based on forecast]
+Cantidad:    [340] unidades          [suggested: 50% of current stock]
 Proveedor:   [▼ LabSupplier AR  ]   [dropdown]
              LabSupplier AR
              Bioquímica SA

@@ -32,7 +32,11 @@ _SEASONAL_PATTERNS = {
 
 
 def _build_synthetic_history(reagent_name: str, days: int = 365) -> pd.DataFrame:
-    """Build a synthetic demand history calibrated with real patterns."""
+    """Build a synthetic DAILY demand history calibrated with real patterns.
+
+    Deterministic: np.random.seed(42) is set before generation so the
+    same data is produced every run. This ensures reproducible demos.
+    """
     np.random.seed(42)
     pattern = _SEASONAL_PATTERNS.get(reagent_name, {"base": 100, "winter_mult": 1.0, "winter_months": []})
     base = pattern["base"]
@@ -44,7 +48,6 @@ def _build_synthetic_history(reagent_name: str, days: int = 365) -> pd.DataFrame
     for i in range(days, 0, -1):
         d = today - timedelta(days=i)
         mult = winter_mult if d.month in winter_months else 1.0
-        # Add noise and weekly pattern (lower on weekends)
         noise = np.random.normal(0, base * 0.08)
         weekend_mult = 0.6 if d.weekday() >= 5 else 1.0
         qty = max(0, int(base * mult * weekend_mult + noise))
@@ -62,7 +65,7 @@ def _get_or_build_model(reagent_name: str) -> Prophet:
 
     # Try real seeded demand_history first; fall back to synthetic on low data or error.
     try:
-        rows = db.get_demand_history(reagent_name, limit=365)
+        rows = db.get_demand_history(reagent_name, limit=500)
         if len(rows) >= 30:
             df = pd.DataFrame(rows)
             df = df.rename(columns={"date": "ds", "quantity": "y"})
@@ -72,6 +75,9 @@ def _get_or_build_model(reagent_name: str) -> Prophet:
             df = _build_synthetic_history(reagent_name, days=365)
     except Exception:
         df = _build_synthetic_history(reagent_name, days=365)
+
+    # Pin randomness for reproducible demo (Prophet L-BFGS is deterministic for same data + seed)
+    np.random.seed(42)
 
     m = Prophet(
         yearly_seasonality=True,

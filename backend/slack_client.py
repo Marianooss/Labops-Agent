@@ -299,11 +299,22 @@ def handle_view_forecast(ack, body, client):
             f"{rows}```"
         )
 
+        # -------------------------------------------------------------------
+        # Rich Block Kit: forecast table + embedded chart image
+        # -------------------------------------------------------------------
+        backend_url = os.environ.get("BACKEND_URL", "http://localhost:8000")
+        chart_url = f"{backend_url}/chart/forecast/{reagent}?days=14"
+
         client.chat_postMessage(
             channel=channel,
             thread_ts=thread_ts,
             blocks=[
                 {"type": "section", "text": {"type": "mrkdwn", "text": table}},
+                {
+                    "type": "image",
+                    "image_url": chart_url,
+                    "alt_text": f"Pronóstico de demanda — {reagent}",
+                },
                 _demo_badge(),
             ],
             text=f"Pronóstico {reagent}",
