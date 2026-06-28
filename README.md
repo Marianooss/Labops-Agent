@@ -34,6 +34,24 @@ Clinical laboratories run on reagents. When a critical reagent runs out mid-oper
 
 ---
 
+## MCP Server
+
+LabOps Agent exposes a **real MCP Server** using the official Anthropic MCP Python SDK:
+
+```bash
+# Run MCP Server (stdio transport)
+cd backend
+python mcp_server.py
+```
+
+Tools available:
+- `get_inventory` — Query current reagent stock
+- `get_forecast` — Prophet demand forecast
+- `create_order` — Create reagent order
+- `update_canvas` — Update inventory Canvas
+
+---
+
 ## Architecture
 
 ```

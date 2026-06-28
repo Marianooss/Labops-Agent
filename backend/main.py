@@ -59,6 +59,17 @@ def api_update_canvas(payload: Dict[str, Any]) -> Dict[str, Any]:
     return mcp.update_canvas(payload["channel_id"], payload["reagent_data"])
 
 
+@app.get("/mcp/info")
+async def mcp_info():
+    return {
+        "name": "labops-agent",
+        "version": "1.0.0",
+        "tools": ["get_inventory", "get_forecast", "create_order", "update_canvas"],
+        "transport": "stdio",
+        "description": "MCP Server for clinical lab reagent management",
+    }
+
+
 # ---------------------------------------------------------------------------
 # Prediction
 # ---------------------------------------------------------------------------

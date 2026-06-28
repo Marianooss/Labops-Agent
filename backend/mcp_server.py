@@ -1,19 +1,28 @@
 """
-mcp_server.py — MCP Server exposing lab tools for the Slack agent.
-Tools: get_inventory, get_forecast, create_order, update_canvas
+mcp_server.py — Real MCP Server using Anthropic MCP Python SDK.
+Exposes 4 lab tools: get_inventory, get_forecast, create_order, update_canvas.
+
+Dual-mode:
+  1. Direct Python functions (used by FastAPI REST endpoints in main.py)
+  2. MCP Server via stdio transport (used by Claude Desktop / MCP clients)
 """
+import asyncio
+import json
+import os
 from typing import Dict, Any, Optional
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
+
 import database as db
 import prediction
 
 
 # ---------------------------------------------------------------------------
-# Tool: get_inventory
+# Core tool functions (REST / direct import compatible)
 # ---------------------------------------------------------------------------
 def get_inventory(reagent_name: Optional[str] = None) -> Dict[str, Any]:
-    """
-    MCP tool: Return current stock for one or all reagents.
-    """
+    """Return current stock for one or all reagents."""
     rows = db.get_inventory(reagent_name)
     return {
         "tool": "get_inventory",
@@ -23,13 +32,8 @@ def get_inventory(reagent_name: Optional[str] = None) -> Dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Tool: get_forecast
-# ---------------------------------------------------------------------------
 def get_forecast(reagent_name: str, days: int = 30) -> Dict[str, Any]:
-    """
-    MCP tool: Return Prophet demand forecast for a reagent.
-    """
+    """Return Prophet demand forecast for a reagent."""
     forecast = prediction.get_forecast(reagent_name, days=days)
     return {
         "tool": "get_forecast",
@@ -38,13 +42,8 @@ def get_forecast(reagent_name: str, days: int = 30) -> Dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Tool: create_order
-# ---------------------------------------------------------------------------
 def create_order(reagent_name: str, quantity: float, supplier: str) -> Dict[str, Any]:
-    """
-    MCP tool: Create a reagent order in Supabase.
-    """
+    """Create a reagent order in Supabase."""
     order = db.create_order(reagent_name, quantity, supplier, status="pending")
     return {
         "tool": "create_order",
@@ -53,17 +52,8 @@ def create_order(reagent_name: str, quantity: float, supplier: str) -> Dict[str,
     }
 
 
-# ---------------------------------------------------------------------------
-# Tool: update_canvas
-# ---------------------------------------------------------------------------
 def update_canvas(channel_id: str, reagent_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    MCP tool: Update the Slack Canvas inventory document.
-    TODO: Connect to Slack Canvas API via bolt client.
-    For hackathon demo, returns the prepared payload.
-    """
-    # Canvas update is a Slack API call; this tool returns the prepared payload.
-    # See: https://api.slack.com/reference/canvas-api
+    """Update the Slack Canvas inventory document (payload prepared)."""
     payload = {
         "channel_id": channel_id,
         "canvas_title": "LabOps Inventario — DEMO",
@@ -104,3 +94,117 @@ def update_canvas(channel_id: str, reagent_data: Dict[str, Any]) -> Dict[str, An
         "success": True,
         "note": "Canvas payload prepared. Send via Slack Canvas API in production.",
     }
+
+
+# ---------------------------------------------------------------------------
+# MCP Server (Anthropic MCP SDK — stdio transport)
+# ---------------------------------------------------------------------------
+try:
+    from mcp.server import Server
+    from mcp.server.stdio import stdio_server
+    from mcp.types import Tool, TextContent
+
+    _server = Server("labops-agent")
+
+    @_server.list_tools()
+    async def _list_tools():
+        return [
+            Tool(
+                name="get_inventory",
+                description="Get current reagent stock levels from the lab inventory",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "reagent_name": {
+                            "type": "string",
+                            "description": "Name of the reagent (e.g. TSH, Hemograma)"
+                        }
+                    }
+                }
+            ),
+            Tool(
+                name="get_forecast",
+                description="Get Prophet demand forecast for a reagent",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "reagent_name": {"type": "string"},
+                        "days": {"type": "integer", "default": 30}
+                    },
+                    "required": ["reagent_name"]
+                }
+            ),
+            Tool(
+                name="create_order",
+                description="Create a reagent order in the system",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "reagent_name": {"type": "string"},
+                        "quantity": {"type": "number"},
+                        "supplier": {"type": "string"}
+                    },
+                    "required": ["reagent_name", "quantity", "supplier"]
+                }
+            ),
+            Tool(
+                name="update_canvas",
+                description="Update the Slack Canvas inventory document",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "channel_id": {"type": "string"},
+                        "reagent_data": {"type": "object"}
+                    },
+                    "required": ["channel_id", "reagent_data"]
+                }
+            ),
+        ]
+
+    @_server.call_tool()
+    async def _call_tool(name: str, arguments: dict):
+        if name == "get_inventory":
+            result = get_inventory(arguments.get("reagent_name"))
+            return [TextContent(type="text", text=json.dumps(result))]
+
+        elif name == "get_forecast":
+            result = get_forecast(
+                arguments["reagent_name"],
+                days=arguments.get("days", 30)
+            )
+            return [TextContent(type="text", text=json.dumps(result))]
+
+        elif name == "create_order":
+            result = create_order(
+                arguments["reagent_name"],
+                arguments["quantity"],
+                arguments["supplier"]
+            )
+            return [TextContent(type="text", text=json.dumps(result))]
+
+        elif name == "update_canvas":
+            result = update_canvas(
+                arguments["channel_id"],
+                arguments["reagent_data"]
+            )
+            return [TextContent(type="text", text=json.dumps(result))]
+
+        raise ValueError(f"Unknown tool: {name}")
+
+    async def run_mcp_server():
+        async with stdio_server() as streams:
+            await _server.run(
+                streams[0], streams[1],
+                _server.create_initialization_options()
+            )
+
+except ImportError:
+    _server = None
+    run_mcp_server = None
+
+
+if __name__ == "__main__":
+    if run_mcp_server:
+        asyncio.run(run_mcp_server())
+    else:
+        print("[ERROR] MCP SDK not installed. Run: pip install mcp>=1.0.0")
