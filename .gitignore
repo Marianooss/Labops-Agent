@@ -47,3 +47,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Internal / hackathon files
+test_endpoints.ps1
+*.ps1
+SESSION_STATE.md
+notebooks/prophet_metrics.json
