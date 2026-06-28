@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-load_dotenv()  # Load .env before reading env vars
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))  # Load .env from project root
 
 import database as db
 import prediction

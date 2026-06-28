@@ -7,7 +7,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from anthropic import Anthropic
 
-load_dotenv()  # Load .env before reading env vars
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))  # Load .env from project root
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")

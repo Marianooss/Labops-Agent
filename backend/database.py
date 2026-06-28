@@ -7,7 +7,7 @@ from typing import Optional, List, Dict, Any
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-load_dotenv()  # Load .env before reading env vars
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))  # Load .env from project root
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
