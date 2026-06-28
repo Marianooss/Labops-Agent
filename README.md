@@ -126,15 +126,19 @@ cp .env.example .env
 ### 5. Run
 
 ```bash
-# Terminal 1: FastAPI backend
-uvicorn backend.main:app --reload
+# Terminal 1: FastAPI backend (run from backend/ directory)
+cd backend
+python -m uvicorn main:app --reload
 
-# Terminal 2: Slack agent (Socket Mode)
-python -m backend.slack_client
+# Terminal 2: Slack agent (run from backend/ directory)
+cd backend
+python slack_client.py
 
-# Test alert trigger:
-curl "http://localhost:8000/alert/trigger?reagent=TSH&channel=labops-alerts"
+# Test alert trigger (from backend/ directory):
+curl "http://localhost:8000/alert/trigger?reagent_name=TSH"
 ```
+
+> **Note:** All commands must be run from the `backend/` directory, not the repo root. This is because the backend modules use relative imports.
 
 ---
 
