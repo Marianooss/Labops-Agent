@@ -61,7 +61,7 @@ react; they don't plan.
 
 **Model accuracy:**
 - Algorithm: Prophet (Facebook/Meta)
-- Cross-validation accuracy: 87%
+- Cross-validation accuracy: 87.1% (MAPE 12.9%, RMSE 17.87 units)
 - Critical stockout flags: 100% reproducible at temperature=0
 - Secondary flags: 13-14/run variance (documented in ADR-007)
 
@@ -132,7 +132,7 @@ No product in the Slack Marketplace combines:
 | Metric | Target | How Measured |
 |---|---|---|
 | Stockout reduction | 40%+ | Compare stockout events before/after |
-| Alert accuracy | 87%+ | Predicted stockout vs actual stockout |
+| Alert accuracy | 87.1%+ | Predicted stockout vs actual stockout (MAPE 12.9%) |
 | Time-to-order | <5 min | From alert to confirmed order in Slack |
 | Lab adoption | 5 pilots in 90 days | Active sandbox installations |
 

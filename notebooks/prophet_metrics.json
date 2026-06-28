@@ -1,0 +1,14 @@
+{
+  "reagent": "TSH",
+  "history_days": 365,
+  "cv_initial": "180 days",
+  "cv_period": "30 days",
+  "cv_horizon": "14 days",
+  "mae": 14.11,
+  "rmse": 17.87,
+  "mape": 0.129,
+  "mape_percent": 12.9,
+  "coverage": 0.7244,
+  "calibrated": true,
+  "note": "DEMO \u2014 synthetic data calibrated with real demand patterns"
+}
