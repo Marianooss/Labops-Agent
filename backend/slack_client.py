@@ -171,31 +171,38 @@ def handle_view_forecast(ack, body, client):
     )
 
     # -----------------------------------------------------------------------
-    # TASK 1 — Real-Time Search API: find past alerts about this reagent
+    # TASK 1 — Real-Time Search API via conversations.history
     # -----------------------------------------------------------------------
+    LABOPS_ALERTS_CHANNEL_ID = os.environ.get("LABOPS_ALERTS_CHANNEL_ID", "")
     try:
-        search_result = client.search_messages(
-            query=f"{reagent} in:{LABOPS_ALERTS_CHANNEL.lstrip('#')}",
-            count=5,
-            sort="timestamp",
-            sort_dir="desc",
-        )
-        matches = search_result.get("messages", {}).get("matches", [])[:3]
-        if matches:
-            alert_lines = []
-            for match in matches:
-                ts = match.get("ts", "")
-                date = ts.split(".")[0] if ts else "N/A"
-                text_snippet = match.get("text", "")[:80]
-                alert_lines.append(f"• `{date}` — {text_snippet}...")
-            history_text = (
-                f"*📋 Historial reciente de `{reagent}` en {LABOPS_ALERTS_CHANNEL}:*\n"
-                + "\n".join(alert_lines)
+        if LABOPS_ALERTS_CHANNEL_ID:
+            history_result = client.conversations_history(
+                channel=LABOPS_ALERTS_CHANNEL_ID,
+                limit=20,
             )
+            messages = history_result.get("messages", [])
+            reagent_mentions = [
+                m for m in messages
+                if reagent.upper() in m.get("text", "").upper()
+                and m.get("bot_id")  # only bot messages (our alerts)
+            ][:3]
+            if reagent_mentions:
+                alert_lines = []
+                for msg in reagent_mentions:
+                    ts = msg.get("ts", "")
+                    date = ts.split(".")[0] if ts else "N/A"
+                    text_snippet = msg.get("text", "")[:80]
+                    alert_lines.append(f"• `{date}` — {text_snippet}...")
+                history_text = (
+                    f"*📋 {len(reagent_mentions)} alerta(s) reciente(s) de `{reagent}`:*\n"
+                    + "\n".join(alert_lines)
+                )
+            else:
+                history_text = f"*📋 Sin alertas previas de `{reagent}` en el historial reciente.*"
         else:
-            history_text = f"*📋 Sin alertas previas de `{reagent}` en {LABOPS_ALERTS_CHANNEL}.*"
-    except Exception:
-        history_text = f"*📋 Búsqueda de historial no disponible para `{reagent}` (verificá scope `search:read`).*"
+            history_text = "*📋 `LABOPS_ALERTS_CHANNEL_ID` no configurado. Agregalo a .env.*"
+    except Exception as e:
+        history_text = f"*📋 No se pudo obtener historial: {str(e)} (verificá scope `channels:history`).*"
 
     client.chat_postMessage(
         channel=channel,
