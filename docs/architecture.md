@@ -8,7 +8,7 @@
 
 LabOps Agent is a Slack-native AI agent that predicts reagent stockouts
 in clinical laboratories before they happen. It runs on three Slack
-platform technologies (MCP Server, Real-Time Search API, Slack AI)
+platform technologies (MCP Server, Channel History API, Claude API summarization)
 orchestrated via a FastAPI backend with Prophet demand forecasting.
 
 ---
@@ -54,7 +54,7 @@ orchestrated via a FastAPI backend with Prophet demand forecasting.
 │  │  Algorithm: Prophet (Facebook/Meta)                      │    │
 │  │  Training: synthetic data calibrated with real patterns  │    │
 │  │  Source: 414,289 B2B derivation records (Argentina)      │    │
-│  │  Accuracy: 87% cross-validation                          │    │
+│  │  Accuracy: 84.3% cross-validation (MAPE 15.75%)          │    │
 │  │                                                          │    │
 │  │  Key patterns:                                           │    │
 │  │  - TSH: winter_mult=1.8 (Jun-Aug spike in AR)           │    │
@@ -102,25 +102,25 @@ Tools exposed:
 
 **Why MCP:** Keeps the agent's data access declarative and auditable. Each tool call is logged and the agent can reason about which tool to use for which task.
 
-### 2. Real-Time Search API (RTS API)
-**What it does:** Searches workspace messages and canvases for historical reagent incidents.
+### 2. Channel History API
+**What it does:** Queries `#labops-alerts` message history for past reagent incidents.
 
-When a user asks "what happened with TSH last month?", the agent uses RTS API to search `#labops-alerts` for past messages about TSH — without storing any data externally. This gives the agent contextual memory within Slack's own infrastructure.
+When a user asks "what happened with TSH last month?", the agent uses Slack's `conversations.history` API to fetch past messages about TSH from `#labops-alerts` — without storing any data externally. This gives the agent contextual memory within Slack's own infrastructure.
 
 ```
-Scopes used: search:read.public, search:read.private
-Query example: "TSH stockout #labops-alerts"
+Scopes used: channels:history, groups:history
+Query method: client.conversations_history(channel_id) filtered by reagent name
 Returns: past alerts, orders placed, resolutions
 ```
 
-### 3. Slack AI
-**What it does:** Summarizes `#labops-alerts` channel history on demand.
+### 3. Claude API Summarization
+**What it does:** Uses Claude API to summarize `#labops-alerts` channel history on demand.
 
-When a lab supervisor asks for context about a reagent's recent history, the agent triggers Slack AI to summarize the relevant thread or channel history. This provides a human-readable summary without the agent having to parse raw message history.
+When a lab supervisor asks for context about a reagent's recent history, the agent calls the Claude API to generate a natural language summary of the relevant thread or channel history. This provides a human-readable summary without the agent having to parse raw message history.
 
 ```
 Use case: "Resume los últimos incidentes con TSH"
-Output: AI-generated summary of last 30 days of TSH alerts
+Output: Claude-generated summary of recent TSH alerts
 ```
 
 ---
@@ -173,7 +173,7 @@ Prophet was chosen for its native handling of:
 The model was trained on synthetic data calibrated with real demand patterns extracted from 414,289 B2B clinical laboratory derivation records. The synthetic data preserves the statistical patterns (seasonal multipliers, weekly rhythms, noise levels) without including any real patient or laboratory identifiers.
 
 **Performance:**
-- 87% accuracy on cross-validation
+- 84.3% accuracy on cross-validation (MAPE 15.75%, RMSE 20.6 units)
 - Critical flags (stockout within lead time): 100% reproducible at temperature=0
 - Model serialized to `models/{reagent}_model.pkl` after first fit (~10-30s)
 - Subsequent calls load from disk (<100ms)

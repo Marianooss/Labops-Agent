@@ -4,11 +4,11 @@
   "cv_initial": "180 days",
   "cv_period": "30 days",
   "cv_horizon": "14 days",
-  "mae": 14.11,
-  "rmse": 17.87,
-  "mape": 0.129,
-  "mape_percent": 12.9,
-  "coverage": 0.7244,
+  "mae": 16.51,
+  "rmse": 20.6,
+  "mape": 0.1575,
+  "mape_percent": 15.75,
+  "coverage": 0.609,
   "calibrated": true,
   "note": "DEMO \u2014 synthetic data calibrated with real demand patterns"
 }

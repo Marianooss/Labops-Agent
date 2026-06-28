@@ -26,7 +26,8 @@ react; they don't plan.
 
 **Primary market — Argentina:**
 - ~900 PAL-accredited clinical laboratories in Argentina
-  *(Source: ANLIS/PAHO registry, Argentine laboratory accreditation data)*
+  *(Source: ANLIS — Administración Nacional de Laboratorios e Institutos de Salud,
+  https://www.anlis.gob.ar/)*
 - Realistic paying market: 200-500 laboratories
   *(Based on: labs with IT infrastructure + Slack adoption + budget)*
 - Average reagent categories managed per lab: 15-50 test types
@@ -61,7 +62,7 @@ react; they don't plan.
 
 **Model accuracy:**
 - Algorithm: Prophet (Facebook/Meta)
-- Cross-validation accuracy: 87.1% (MAPE 12.9%, RMSE 17.87 units)
+- Cross-validation accuracy: 84.3% (MAPE 15.75%, RMSE 20.6 units)
 - Critical stockout flags: 100% reproducible at temperature=0
 - Secondary flags: 13-14/run variance (documented in ADR-007)
 
@@ -71,10 +72,15 @@ react; they don't plan.
 
 **Per laboratory (conservative estimates):**
 - Stockout reduction: 40-60%
-  *(Based on: literature on demand-based vs. threshold-based inventory
-  management in healthcare supply chains)*
+  *(Based on: Gebicki, M., Mooney, E., Chen, S.J., & Mazur, L.M. (2014).
+  Evaluation of hospital medication inventory policies.
+  Health Care Management Science, 17(3), 215-229.
+  https://doi.org/10.1007/s10729-013-9251-1
+  — demand-based forecasting reduces stockouts 35–65% vs. threshold-based systems)*
 - Time saved on inventory management: 2-3 hours/week
-  *(Based on: manual stock checking + emergency procurement workflows)*
+  *(Estimated based on 4 years of B2B KAM experience in clinical
+  diagnostics (Labmedicina/Swiss Medical, Argentina).
+  No published benchmark found for this specific metric.)*
 - Emergency procurement cost avoidance: $200-500 USD/month
   *(Based on: 2-5x premium on emergency orders vs. standard pricing)*
 
@@ -132,12 +138,28 @@ No product in the Slack Marketplace combines:
 | Metric | Target | How Measured |
 |---|---|---|
 | Stockout reduction | 40%+ | Compare stockout events before/after |
-| Alert accuracy | 87.1%+ | Predicted stockout vs actual stockout (MAPE 12.9%) |
+| Alert accuracy | 84.3%+ | Predicted stockout vs actual stockout (MAPE 15.75%) |
 | Time-to-order | <5 min | From alert to confirmed order in Slack |
 | Lab adoption | 5 pilots in 90 days | Active sandbox installations |
 
 ---
 
+## References
+
+1. Gebicki, M., Mooney, E., Chen, S.J., & Mazur, L.M. (2014).
+   Evaluation of hospital medication inventory policies.
+   *Health Care Management Science*, 17(3), 215–229.
+   https://doi.org/10.1007/s10729-013-9251-1
+
+2. ANLIS — Administración Nacional de Laboratorios e Institutos de Salud.
+   Laboratory accreditation registry.
+   https://www.anlis.gob.ar/
+
+3. Prophet forecasting model validation:
+   See `notebooks/prophet_validation.ipynb`
+   (MAE: 16.51, RMSE: 20.6, MAPE: 15.75%, Accuracy: 84.3%)
+
+---
+
 *Impact metrics declared 2026-06-25 · BIBLE-LABOPS-IMPACT-METRICS*
-*Sources: ANLIS/PAHO registry, prophet cross-validation, 414K dataset analysis*
 *All projections are estimates based on cited methodology.*

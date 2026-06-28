@@ -52,7 +52,6 @@ Thumbs.db
 test_endpoints.ps1
 *.ps1
 SESSION_STATE.md
-notebooks/prophet_metrics.json
 ADVERSARIAL_JUDGE_PROMPT.md
 AGENTS.md
 BIBLE.md

@@ -18,9 +18,16 @@ Clinical laboratories run on reagents. When a critical reagent runs out mid-oper
 
 ## What LabOps Agent Does
 
-1. **Predicts** stockouts using Prophet, calibrated on 414,289 real B2B derivation records from Argentine clinical labs
+1. **Predicts** stockouts using Prophet, calibrated on demand patterns from 414,289 B2B derivation records in Argentine clinical labs
 2. **Alerts** lab staff in `#labops-alerts` with interactive Block Kit messages — before the stockout happens
 3. **Acts** — staff orders reagents, assigns tasks, and updates inventory without leaving Slack
+
+### Why LabOps Agent is Different
+
+No existing product (Quartzy, Scispot, Benchling) combines:
+- **Prediction by test type** — TSH spikes in winter, Hemograma is stable; each reagent gets its own Prophet model
+- **Native Slack agent** — not a webhook or Zapier bridge; Bolt Python with Socket Mode, interactive Block Kit buttons, and modals
+- **Domain expertise** — built by someone with 4 years of B2B KAM experience in clinical diagnostics (Argentina), not a generic inventory template
 
 ---
 
@@ -29,8 +36,8 @@ Clinical laboratories run on reagents. When a critical reagent runs out mid-oper
 | Technology | How It's Used |
 |---|---|
 | **MCP Server** | Exposes 4 lab tools: `get_inventory`, `get_forecast`, `create_order`, `update_canvas` |
-| **Real-Time Search API** | Searches workspace messages and canvases for reagent incident history |
-| **Slack AI** | Summarizes `#labops-alerts` channel history when querying past incidents |
+| **Channel History API** | Searches #labops-alerts message history for past reagent incidents |
+| **Claude API Summarization** | Generates natural language summaries of reagent alert history |
 
 ---
 
@@ -66,7 +73,7 @@ Tools available:
 │  │   MCP SERVER    │   │   PREDICTION ENGINE      │ │
 │  │ get_inventory   │   │   Prophet + seasonality  │ │
 │  │ get_forecast    │   │   calibrated: 414K rows  │ │
-│  │ create_order    │   │   87% cross-val accuracy │ │
+│  │ create_order    │   │   84.3% cross-val accuracy │ │
 │  │ update_canvas   │   └──────────────────────────┘ │
 │  └─────────────────┘                                 │
 └─────────────────────────────────┬───────────────────┘
@@ -95,7 +102,7 @@ Tools available:
 
 **1:30–2:15** — User clicks "Ordenar reactivo" → modal opens → one click confirms → Canvas auto-updates
 
-**2:15–3:00** — Agent explains WHY TSH is at risk (seasonal demand pattern) → Slack AI summarizes past incidents
+**2:15–3:00** — Agent explains WHY TSH is at risk (seasonal demand pattern) → Claude API summarizes past incidents
 
 ---
 
@@ -134,12 +141,17 @@ cp .env.example .env
 # 2. data/seed_data.sql
 ```
 
-### 4. Create Slack App
+### 4. Create Slack App (from manifest)
 
-- Go to [api.slack.com/apps](https://api.slack.com/apps) → Create New App
-- Enable Socket Mode
-- Add scopes: `chat:write`, `channels:read`, `groups:read`, `im:write`, `users:read` 
-- Install to your Developer Sandbox workspace
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create New App**
+2. Select **From an app manifest**
+3. Choose your Developer Sandbox workspace
+4. Paste the contents of [`slack-manifest.json`](slack-manifest.json)
+5. Click **Create**
+6. Go to **OAuth & Permissions** → **Install to Workspace**
+7. Copy the **Bot User OAuth Token** and **App-Level Token** into your `.env`
+
+Manifest includes all required scopes: `chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`, `im:write`, `users:read`, `app_mentions:read`.
 
 ### 5. Run
 
@@ -192,7 +204,7 @@ labops-agent/
 
 ## UiPath Components Used
 
-None — this project uses the **Slack platform** (MCP Server, Real-Time Search API, Slack AI) as the orchestration and agent layer.
+None — this project uses the **Slack platform** (MCP Server, Channel History API, Claude API) as the orchestration and agent layer.
 
 ---
 

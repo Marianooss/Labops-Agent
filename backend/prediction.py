@@ -28,6 +28,7 @@ _SEASONAL_PATTERNS = {
 
 def _build_synthetic_history(reagent_name: str, days: int = 365) -> pd.DataFrame:
     """Build a synthetic demand history calibrated with real patterns."""
+    np.random.seed(42)
     pattern = _SEASONAL_PATTERNS.get(reagent_name, {"base": 100, "winter_mult": 1.0, "winter_months": []})
     base = pattern["base"]
     winter_mult = pattern["winter_mult"]
