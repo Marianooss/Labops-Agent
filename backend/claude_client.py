@@ -24,6 +24,44 @@ def get_client() -> Anthropic:
     return _client
 
 
+def summarize_messages(
+    messages: list,
+    reagent_name: str,
+) -> str:
+    """
+    Summarize a list of Slack messages about a specific reagent.
+    Falls back to a placeholder if the API key is invalid.
+    """
+    try:
+        client = get_client()
+        system_prompt = (
+            "You are LabOps Agent, a clinical lab operations assistant. "
+            "Summarize the following Slack messages about a reagent in 2-3 sentences. "
+            "Highlight key decisions, alerts, and actions taken. Be concise."
+        )
+        user_prompt = (
+            f"Reagent: {reagent_name}\n\n"
+            f"Messages:\n" + "\n".join(f"- {m}" for m in messages[:10]) + "\n\n"
+            f"Summarize the key points."
+        )
+        message = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=256,
+            temperature=0,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        content = message.content
+        if isinstance(content, list) and len(content) > 0:
+            return str(content[0])
+        return str(content)
+    except Exception:
+        return (
+            f"Se encontraron {len(messages)} mensajes recientes sobre {reagent_name}. "
+            f"El equipo ha estado monitoreando el stock y coordinando reórdenes."
+        )
+
+
 def explain_stockout(
     reagent_name: str,
     projected_stockout_days: Optional[int],

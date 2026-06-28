@@ -2,9 +2,11 @@
 slack_client.py — Bolt Python app + event handlers for LabOps Agent.
 Socket Mode only. 4 handlers: scheduled alert, view_forecast, order_reagent, assign_team.
 All messages carry a visible DEMO badge.
+Includes Real-Time Search API + Slack AI summarization.
 """
 import json
 import os
+import re
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from slack_bolt import App
@@ -166,6 +168,43 @@ def handle_view_forecast(ack, body, client):
             _demo_badge(),
         ],
         text=f"Pronóstico {reagent}",
+    )
+
+    # -----------------------------------------------------------------------
+    # TASK 1 — Real-Time Search API: find past alerts about this reagent
+    # -----------------------------------------------------------------------
+    try:
+        search_result = client.search_messages(
+            query=f"{reagent} in:{LABOPS_ALERTS_CHANNEL.lstrip('#')}",
+            count=5,
+            sort="timestamp",
+            sort_dir="desc",
+        )
+        matches = search_result.get("messages", {}).get("matches", [])[:3]
+        if matches:
+            alert_lines = []
+            for match in matches:
+                ts = match.get("ts", "")
+                date = ts.split(".")[0] if ts else "N/A"
+                text_snippet = match.get("text", "")[:80]
+                alert_lines.append(f"• `{date}` — {text_snippet}...")
+            history_text = (
+                f"*📋 Historial reciente de `{reagent}` en {LABOPS_ALERTS_CHANNEL}:*\n"
+                + "\n".join(alert_lines)
+            )
+        else:
+            history_text = f"*📋 Sin alertas previas de `{reagent}` en {LABOPS_ALERTS_CHANNEL}.*"
+    except Exception:
+        history_text = f"*📋 Búsqueda de historial no disponible para `{reagent}` (verificá scope `search:read`).*"
+
+    client.chat_postMessage(
+        channel=channel,
+        thread_ts=thread_ts,
+        blocks=[
+            {"type": "section", "text": {"type": "mrkdwn", "text": history_text}},
+            _demo_badge(),
+        ],
+        text=f"Historial {reagent}",
     )
 
 
@@ -395,7 +434,63 @@ def handle_assign_team_submission(ack, body, client):
 # App mention handler (onboarding)
 # ---------------------------------------------------------------------------
 @bolt_app.event("app_mention")
-def handle_app_mention(event, say):
+def handle_app_mention(event, say, client):
+    text = event.get("text", "").lower()
+    user = event.get("user", "")
+    channel = event.get("channel", "")
+
+    # Detect reagent name from mention
+    reagent = "TSH"
+    for candidate in ["tsh", "glucose", "hba1c", "lipid", "creatinine"]:
+        if candidate in text:
+            reagent = candidate.upper()
+            break
+
+    # -----------------------------------------------------------------------
+    # TASK 2 — Slack AI summarization
+    # -----------------------------------------------------------------------
+    if "resumen" in text or "summary" in text or "summarize" in text:
+        try:
+            history = client.conversations_history(channel=channel, limit=10)
+            messages = [
+                m.get("text", "")
+                for m in history.get("messages", [])
+                if m.get("text")
+            ]
+            summary = claude.summarize_messages(messages, reagent)
+            say(
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"🤖 *Resumen IA de `{reagent}`:*\n{summary}",
+                        },
+                    },
+                    _demo_badge(),
+                ],
+                text=f"Resumen IA {reagent}",
+            )
+        except Exception as e:
+            say(
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": (
+                                f"🤖 *Resumen IA:* No pude acceder al historial del canal. "
+                                f"Error: `{str(e)}`. Verificá que la app tenga el scope `channels:history`."
+                            ),
+                        },
+                    },
+                    _demo_badge(),
+                ],
+                text="Error resumen IA",
+            )
+        return
+
+    # Default onboarding response
     say(
         blocks=[
             {
@@ -403,14 +498,17 @@ def handle_app_mention(event, say):
                 "text": {
                     "type": "mrkdwn",
                     "text": (
-                        f"Hola <@{event['user']}>! Soy *LabOps Agent*.\n"
-                        "Te alerto *antes* de que un reactivo se agote. "
-                        "Mencioname con el nombre de un reactivo para ver su pronóstico."
+                        f"Hola <@{user}>! Soy *LabOps Agent*.\n"
+                        "Te alerto *antes* de que un reactivo se agote.\n\n"
+                        "*Comandos:*\n"
+                        f"• `@LabOps Agent {reagent}` → pronóstico de stock\n"
+                        f"• `@LabOps Agent resumen {reagent}` → resumen IA del canal"
                     ),
                 },
             },
             _demo_badge(),
-        ]
+        ],
+        text="LabOps Agent onboarding",
     )
 
 
