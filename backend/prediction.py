@@ -5,11 +5,16 @@ Calibrated with patterns derived from anonymized demand analysis (Argentina).
 import os
 import pickle
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, List
 import numpy as np
 import pandas as pd
 from prophet import Prophet
+
+try:
+    from backend import database as db
+except ImportError:
+    import database as db
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 os.makedirs(MODELS_DIR, exist_ok=True)
@@ -35,7 +40,7 @@ def _build_synthetic_history(reagent_name: str, days: int = 365) -> pd.DataFrame
     winter_months = pattern["winter_months"]
 
     records = []
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     for i in range(days, 0, -1):
         d = today - timedelta(days=i)
         mult = winter_mult if d.month in winter_months else 1.0
@@ -54,7 +59,20 @@ def _get_or_build_model(reagent_name: str) -> Prophet:
     if os.path.exists(model_path):
         with open(model_path, "rb") as f:
             return pickle.load(f)
-    df = _build_synthetic_history(reagent_name, days=365)
+
+    # Try real seeded demand_history first; fall back to synthetic on low data or error.
+    try:
+        rows = db.get_demand_history(reagent_name, limit=365)
+        if len(rows) >= 30:
+            df = pd.DataFrame(rows)
+            df = df.rename(columns={"date": "ds", "quantity": "y"})
+            df["ds"] = pd.to_datetime(df["ds"])
+            df = df.sort_values("ds").reset_index(drop=True)
+        else:
+            df = _build_synthetic_history(reagent_name, days=365)
+    except Exception:
+        df = _build_synthetic_history(reagent_name, days=365)
+
     m = Prophet(
         yearly_seasonality=True,
         weekly_seasonality=True,
@@ -77,7 +95,7 @@ def get_forecast(reagent_name: str, days: int = 30) -> Dict[str, Any]:
     forecast = model.predict(future)
 
     # Get next N days of forecast
-    future_slice = forecast[forecast["ds"] > pd.Timestamp(datetime.utcnow().date())].head(days)
+    future_slice = forecast[forecast["ds"] > pd.Timestamp(datetime.now(timezone.utc).date())].head(days)
     daily_demand = future_slice[["ds", "yhat", "yhat_lower", "yhat_upper"]].to_dict(orient="records")
 
     # Calculate cumulative demand for stockout projection
@@ -115,7 +133,7 @@ def calculate_stockout_projection(reagent_name: str, current_stock: float, reord
         if cumulative >= current_stock and stockout_date is None:
             stockout_date = day["date"]
             ds = datetime.strptime(day["date"], "%Y-%m-%d")
-            projected_stockout_days = (ds.date() - datetime.utcnow().date()).days
+            projected_stockout_days = (ds.date() - datetime.now(timezone.utc).date()).days
             break
 
     severity = "critical" if projected_stockout_days is not None and projected_stockout_days < reorder_lead_time else "warning"

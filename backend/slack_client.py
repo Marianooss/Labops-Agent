@@ -352,6 +352,46 @@ def handle_view_forecast(ack, body, client):
             ],
             text=f"Historial {reagent}",
         )
+
+        # -------------------------------------------------------------------
+        # TASK 2 — Slack Real-Time Search API (search.messages)
+        # -------------------------------------------------------------------
+        search_text = ""
+        try:
+            search_result = client.search_messages(
+                query=f"{reagent} in:labops-alerts",
+                count=5,
+                sort="timestamp",
+                sort_dir="desc",
+            )
+            matches = search_result.get("messages", {}).get("matches", [])
+            if matches:
+                search_lines = []
+                for msg in matches[:3]:
+                    channel_name = msg.get("channel", {}).get("name", "unknown")
+                    ts = msg.get("ts", "")
+                    date = ts.split(".")[0] if ts else "N/A"
+                    snippet = msg.get("text", "")[:80]
+                    search_lines.append(f"• `{date}` — #{channel_name}: {snippet}...")
+                search_text = (
+                    f"*🔍 {len(matches)} resultado(s) de búsqueda en el workspace para `{reagent}`:*\n"
+                    + "\n".join(search_lines)
+                )
+            else:
+                search_text = f"*🔍 Sin resultados de búsqueda para `{reagent}` en el workspace.*"
+        except Exception as e:
+            logger.error("Search messages failed: %s", e, exc_info=True)
+            search_text = f"*🔍 No se pudo ejecutar búsqueda: {str(e)} (verificá scope `search:read`).*"
+
+        client.chat_postMessage(
+            channel=channel,
+            thread_ts=thread_ts,
+            blocks=[
+                {"type": "section", "text": {"type": "mrkdwn", "text": search_text}},
+                _demo_badge(),
+            ],
+            text=f"Búsqueda {reagent}",
+        )
     except Exception as exc:
         logger.error("handle_view_forecast failed: %s", exc, exc_info=True)
         if channel:

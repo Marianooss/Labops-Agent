@@ -150,3 +150,12 @@ def startup():
         db.get_supabase()
     except Exception as e:
         logger.warning("Supabase not connected: %s", e)
+
+    # Pre-train Prophet models for all seeded reagents to eliminate demo lag
+    seeded_reagents = ["TSH", "Hemograma", "Ionograma", "Glucosa", "Urea", "Creatinina"]
+    for reagent in seeded_reagents:
+        try:
+            prediction.get_forecast(reagent, days=30)
+            logger.info("Prophet model pre-trained for %s", reagent)
+        except Exception as e:
+            logger.warning("Failed to pre-train model for %s: %s", reagent, e)

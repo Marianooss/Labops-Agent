@@ -114,7 +114,18 @@ Query method: client.conversations_history(channel_id) filtered by reagent name
 Returns: past alerts, orders placed, resolutions
 ```
 
-### 3. Claude API Summarization
+### 3. Slack Search API (Real-Time Search)
+**What it does:** Searches the entire workspace in real time for reagent mentions using Slack's `search.messages` API.
+
+When a user clicks "📊 Ver proyección", the agent runs a real-time search for the reagent across all accessible channels (not just `#labops-alerts`). This surfaces relevant conversations, past alerts, and team discussions that may not be in the immediate channel history.
+
+```
+Scopes used: search:read
+Query method: client.search_messages(query="TSH in:labops-alerts", count=5)
+Returns: cross-channel matches with timestamps and snippets
+```
+
+### 4. Claude API Summarization
 **What it does:** Uses Claude API to summarize `#labops-alerts` channel history on demand.
 
 When a lab supervisor asks for context about a reagent's recent history, the agent calls the Claude API to generate a natural language summary of the relevant thread or channel history. This provides a human-readable summary without the agent having to parse raw message history.

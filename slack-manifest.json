@@ -24,7 +24,8 @@
         "team:read",
         "app_mentions:read",
         "canvases:read",
-        "canvases:write"
+        "canvases:write",
+        "search:read"
       ]
     }
   },

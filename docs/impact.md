@@ -77,10 +77,7 @@ react; they don't plan.
   Health Care Management Science, 17(3), 215-229.
   https://doi.org/10.1007/s10729-013-9251-1
   — demand-based forecasting reduces stockouts 35–65% vs. threshold-based systems)*
-- Time saved on inventory management: 2-3 hours/week
-  *(Estimated based on 4 years of B2B KAM experience in clinical
-  diagnostics (Labmedicina/Swiss Medical, Argentina).
-  No published benchmark found for this specific metric.)*
+- Time saved on inventory management: estimated reduction in manual stock checks and reactive ordering coordination. No published benchmark found for this specific metric; conservative estimate based on 4 years of field observation in clinical diagnostics operations.
 - Emergency procurement cost avoidance: $200-500 USD/month
   *(Based on: 2-5x premium on emergency orders vs. standard pricing)*
 

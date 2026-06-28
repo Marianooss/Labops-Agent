@@ -36,10 +36,9 @@ No existing product (Quartzy, Scispot, Benchling) combines:
 | Technology | How It's Used | Platform |
 |---|---|---|
 | **MCP Server** | Exposes 4 lab tools: `get_inventory`, `get_forecast`, `create_order`, `update_canvas` | Anthropic/Slack |
-| **Slack Channel History API** | Searches #labops-alerts message history for past reagent incidents | Slack |
+| **Slack Search API** | Real-time workspace search for reagent mentions across channels (`search.messages`) | Slack |
+| **Slack Channel History API** | Queries #labops-alerts message history for past reagent incidents | Slack |
 | **Claude API Summarization** | Generates natural language summaries of reagent alert history | Anthropic |
-
-> **Clarification for hackathon requirements:** This project uses the **Slack Channel History API** (`conversations.history`) and the **Anthropic Claude API** directly. It does **not** use "Slack AI" (the built-in Salesforce product) nor "RTS API" (Real-Time Search), to avoid confusion with similarly-named platform features.
 
 ---
 
@@ -108,6 +107,19 @@ Tools available:
 
 ---
 
+## Try it Live
+
+> **Slack Sandbox URL:** https://labopsespacio.slack.com — [Join the Slack Developer Program](https://api.slack.com/developer-program) to create your own sandbox, or install LabOps Agent in your workspace using the manifest below.
+>
+> To test now:
+> 1. Join the [Slack Developer Program](https://api.slack.com/developer-program)
+> 2. Create a Developer Sandbox workspace
+> 3. Create a new app from [`slack-manifest.json`](slack-manifest.json)
+> 4. Run `docker-compose up --build`
+> 5. Paste your Bot Token and App Token into `.env`
+
+---
+
 ## Setup Instructions
 
 ### Prerequisites
@@ -153,7 +165,7 @@ cp .env.example .env
 6. Go to **OAuth & Permissions** → **Install to Workspace**
 7. Copy the **Bot User OAuth Token** and **App-Level Token** into your `.env`
 
-Manifest includes all required scopes: `chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`, `im:write`, `users:read`, `app_mentions:read`, `canvases:read`, `canvases:write`.
+Manifest includes all required scopes: `chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`, `im:write`, `users:read`, `app_mentions:read`, `canvases:read`, `canvases:write`, `search:read`.
 
 ### 5. One-Click Docker Setup (recommended for judges)
 

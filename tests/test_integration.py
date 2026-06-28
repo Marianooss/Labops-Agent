@@ -46,6 +46,13 @@ class TestViewForecast(unittest.TestCase):
                 {"text": "TSH alert", "ts": "123.456", "bot_id": "B1"},
             ]
         }
+        client.search_messages.return_value = {
+            "messages": {
+                "matches": [
+                    {"text": "TSH stock low", "ts": "123.456", "channel": {"name": "labops-alerts"}},
+                ]
+            }
+        }
         body = {
             "actions": [{"value": "TSH"}],
             "channel": {"id": "C123"},
@@ -59,6 +66,10 @@ class TestViewForecast(unittest.TestCase):
         self.assertTrue(any("Pronóstico" in str(c) for c in calls))
         # Should post channel history summary (either with alerts or empty state)
         self.assertTrue(any("alerta" in str(c).lower() for c in calls))
+        # Should post workspace search results
+        self.assertTrue(any("Búsqueda" in str(c) for c in calls))
+        # Should call search.messages
+        client.search_messages.assert_called_once()
 
 
 class TestOrderReagent(unittest.TestCase):

@@ -9,11 +9,10 @@
 
 Before recording:
 - [ ] Supabase has seed data loaded (TSH stock=680, is_demo=true)
-- [ ] FastAPI backend running: `uvicorn backend.main:app --reload` 
-- [ ] Slack client running: `python -m backend.slack_client` 
+- [ ] FastAPI backend running: `uvicorn backend.main:app --reload` (auto-pre-trains Prophet models on startup)
+- [ ] Slack client running: `python -m backend.slack_client`
 - [ ] Slack sandbox open in browser, `#labops-alerts` channel visible
 - [ ] Screen recording software ready (no camera needed, screen only)
-- [ ] Prophet model pre-trained (run one test alert first to pickle)
 
 ---
 
