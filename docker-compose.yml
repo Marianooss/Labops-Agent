@@ -28,12 +28,29 @@ services:
       SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LABOPS_ALERTS_CHANNEL: ${LABOPS_ALERTS_CHANNEL:-#labops-alerts}
+      LABOPS_ALERTS_CHANNEL_ID: ${LABOPS_ALERTS_CHANNEL_ID:-}
     depends_on:
       db:
         condition: service_healthy
     command: >
       sh -c "python scripts/init_db.py &&
              uvicorn backend.main:app --host 0.0.0.0 --port 8000"
+
+  slack_client:
+    build: .
+    environment:
+      DATABASE_URL: postgres://labops:labops@db:5432/labops
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:-}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LABOPS_ALERTS_CHANNEL: ${LABOPS_ALERTS_CHANNEL:-#labops-alerts}
+      LABOPS_ALERTS_CHANNEL_ID: ${LABOPS_ALERTS_CHANNEL_ID:-}
+      ENV: ${ENV:-production}
+    depends_on:
+      - backend
+    command: >
+      sh -c "python backend/slack_client.py"
 
 volumes:
   labops_pgdata:

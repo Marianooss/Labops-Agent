@@ -39,6 +39,8 @@ No existing product (Quartzy, Scispot, Benchling) combines:
 | **Slack Channel History API** | Searches #labops-alerts message history for past reagent incidents | Slack |
 | **Claude API Summarization** | Generates natural language summaries of reagent alert history | Anthropic |
 
+> **Clarification for hackathon requirements:** This project uses the **Slack Channel History API** (`conversations.history`) and the **Anthropic Claude API** directly. It does **not** use "Slack AI" (the built-in Salesforce product) nor "RTS API" (Real-Time Search), to avoid confusion with similarly-named platform features.
+
 ---
 
 ## MCP Server
@@ -156,7 +158,7 @@ Manifest includes all required scopes: `chat:write`, `channels:read`, `channels:
 ### 5. One-Click Docker Setup (recommended for judges)
 
 ```bash
-# Clone and start everything (PostgreSQL + backend + auto-seed)
+# Clone and start everything (PostgreSQL + backend + slack client + auto-seed)
 git clone https://github.com/Marianooss/labops-agent
 cd labops-agent
 docker-compose up --build
@@ -165,25 +167,31 @@ docker-compose up --build
 curl "http://localhost:8000/alert/trigger?reagent_name=TSH"
 ```
 
-> This runs the full stack locally without needing a cloud Supabase account.
-> If you need Slack integration, set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in a `.env` file before running.
+This runs the full stack locally without needing a cloud Supabase account:
+- `db` — PostgreSQL with auto-created schema and seed data
+- `backend` — FastAPI on http://localhost:8000
+- `slack_client` — Bolt Python Socket Mode (waits gracefully if Slack tokens are missing)
 
-### 6. Manual Setup (without Docker)
+> To enable Slack integration, copy `.env.example` to `.env` and fill in `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, and `SLACK_SIGNING_SECRET` before running `docker-compose up`.
+
+### 6. Local Setup without Docker (one-script)
 
 ```bash
-# Terminal 1: FastAPI backend (run from backend/ directory)
-cd backend
-python -m uvicorn main:app --reload
-
-# Terminal 2: Slack agent (run from backend/ directory)
-cd backend
-python slack_client.py
-
-# Test alert trigger (from backend/ directory):
-curl "http://localhost:8000/alert/trigger?reagent_name=TSH"
+# Single command — starts backend + Slack client + seeds DB
+python scripts/start_local.py
 ```
 
-> **Note:** All commands must be run from the `backend/` directory, not the repo root. This is because the backend modules use relative imports.
+Or manually in separate terminals:
+
+```bash
+# Terminal 1: FastAPI backend
+cd backend && uvicorn main:app --reload --port 8000
+
+# Terminal 2: Slack agent
+cd backend && python slack_client.py
+```
+
+> **Note:** Backend commands must be run from the `backend/` directory because modules use relative imports.
 
 ---
 
@@ -211,7 +219,8 @@ labops-agent/
 │   ├── impact.md         # Impact metrics
 │   └── demo_script.md    # 3-minute demo script
 ├── scripts/
-│   └── init_db.py        # Auto-seed PostgreSQL on Docker startup
+│   ├── init_db.py        # Auto-seed PostgreSQL on Docker startup
+│   └── start_local.py    # One-script local startup (backend + slack + seed)
 ├── tests/
 │   ├── test_mcp.py       # MCP tool unit tests
 │   ├── test_prediction.py # Prophet engine tests
@@ -219,6 +228,7 @@ labops-agent/
 ├── models/               # Prophet serialized models (.pkl)
 ├── docker-compose.yml    # One-click local stack
 ├── Dockerfile            # Backend container
+├── Makefile              # make demo / make local / make test
 ├── AGENTS.md             # Development operating system
 ├── BIBLE.md              # Immutable declarations
 └── CLAUDE.md             # Claude Code instructions

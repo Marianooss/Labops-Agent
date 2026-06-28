@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import time
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from slack_bolt import App
@@ -32,10 +33,13 @@ SLACK_APP_TOKEN = os.environ.get("SLACK_APP_TOKEN", "")
 SLACK_SIGNING_SECRET = os.environ.get("SLACK_SIGNING_SECRET", "")
 LABOPS_ALERTS_CHANNEL = os.environ.get("LABOPS_ALERTS_CHANNEL", "#labops-alerts")
 
+ENV = os.environ.get("ENV", "production")
+token_verification_enabled = ENV != "development"
+
 bolt_app = App(
     token=SLACK_BOT_TOKEN,
     signing_secret=SLACK_SIGNING_SECRET,
-    token_verification_enabled=False,  # Skip auth.test for local dev
+    token_verification_enabled=token_verification_enabled,
 )
 
 
@@ -667,7 +671,11 @@ def handle_app_mention(event, say, client):
 # ---------------------------------------------------------------------------
 def start_socket_mode():
     if not SLACK_APP_TOKEN:
-        raise RuntimeError("SLACK_APP_TOKEN required for Socket Mode")
+        logger.warning("SLACK_APP_TOKEN not set. Slack Socket Mode disabled.")
+        logger.warning("To enable Slack integration, add SLACK_APP_TOKEN to your .env file.")
+        # Keep container alive so docker-compose doesn't restart-loop
+        while True:
+            time.sleep(3600)
     handler = SocketModeHandler(bolt_app, SLACK_APP_TOKEN)
     handler.start()
 
