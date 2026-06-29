@@ -712,25 +712,56 @@ def handle_app_mention(event, say, client):
         if not clean_text:
             clean_text = "¿Cómo estás?"
 
+        # Detect reagent from mention for action buttons
+        detected_reagent = ""
+        for candidate in ["tsh", "glucose", "hba1c", "lipid", "creatinine", "hemograma", "ionograma", "urea"]:
+            if candidate in clean_text.lower():
+                detected_reagent = candidate.upper()
+                break
+
         # Run the agent loop — Claude decides which MCP tool to call
         agent_response = agent_router.run_agent(
             user_message=clean_text,
             channel_id=channel,
         )
 
-        say(
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"🤖 *LabOps Agent:*\n{agent_response}",
-                    },
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"🤖 *LabOps Agent:*\n{agent_response}",
                 },
-                _demo_badge(),
-            ],
-            text="LabOps Agent response",
-        )
+            },
+        ]
+        if detected_reagent:
+            blocks.append({
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "📊 Ver proyección", "emoji": True},
+                        "value": detected_reagent,
+                        "action_id": "view_forecast",
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "🛒 Ordenar reactivo", "emoji": True},
+                        "value": detected_reagent,
+                        "action_id": "order_reagent",
+                        "style": "primary",
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "👤 Asignar al equipo", "emoji": True},
+                        "value": detected_reagent,
+                        "action_id": "assign_team",
+                    },
+                ],
+            })
+        blocks.append(_demo_badge())
+
+        say(blocks=blocks, text="LabOps Agent response")
     except Exception as exc:
         logger.error("handle_app_mention failed: %s", exc, exc_info=True)
         say(
