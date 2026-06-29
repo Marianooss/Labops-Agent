@@ -1,23 +1,25 @@
-# LabOps Agent — Demo Script (3 Minutes)
-> BIBLE-LABOPS-DEMO-FLOW · Declared 2026-06-25
-> This is the canonical demo. Do NOT deviate without HUMAN_APPROVAL.
-> Record in Slack Developer Sandbox with seed data loaded.
+# LabOps Agent — Demo Script (≤3 Minutes)
+> BIBLE-LABOPS-DEMO-FLOW · Updated 2026-06-29
+> Record in Slack Developer Sandbox with live Render deploy.
 
 ---
 
 ## Pre-Demo Setup Checklist
 
 Before recording:
+- [ ] Render deploy live: `https://labops-agent.onrender.com` (`/health` returns 200)
+- [ ] `BACKEND_URL=https://labops-agent.onrender.com` set in Render env vars (chart renders)
+- [ ] `RUN_SOCKET_MODE=1` set in Render env vars (bot is online in Slack)
+- [ ] Slack sandbox `https://labopsespacio.slack.com` open, `#labops-alerts` visible
 - [ ] Supabase has seed data loaded (TSH stock=680, is_demo=true)
-- [ ] FastAPI backend running: `uvicorn backend.main:app --reload` (auto-pre-trains Prophet models on startup)
-- [ ] Slack client running: `python -m backend.slack_client`
-- [ ] **Chart rendering:** `BACKEND_URL` set to a public HTTPS origin so the forecast
-      PNG renders in Slack. Either deploy (Render) or run a tunnel:
-      `cloudflared tunnel --url http://localhost:8000` → paste the `https://…` URL
-      into `BACKEND_URL` and restart the Slack client. *(If you skip this, the
-      forecast still shows as native Block Kit fields — the chart is just omitted.)*
-- [ ] Slack sandbox open in browser, `#labops-alerts` channel visible
-- [ ] Screen recording software ready (no camera needed, screen only)
+- [ ] `lab_config` table exists in Supabase (for Canvas persistence)
+- [ ] Screen recording software ready (screen only, no camera)
+
+**Quick verification commands (run from your machine):**
+```bash
+curl "https://labops-agent.onrender.com/health"
+curl "https://labops-agent.onrender.com/alert/trigger?reagent_name=TSH"
+```
 
 ---
 
@@ -27,7 +29,7 @@ Before recording:
 
 ### SEGMENT 1: The Problem (0:00–0:30)
 
-**[Screen: Show #labops-alerts channel — empty or with old messages]**
+**[Screen: Show #labops-alerts channel]**
 
 **Narration:**
 > "Clinical laboratories depend on reagents to run tests. When a reagent
@@ -43,35 +45,35 @@ Before recording:
 
 ### SEGMENT 2: The Prediction Fires (0:30–1:00)
 
-**[Action: Run the alert trigger]**
+**[Action: Trigger the alert via curl or wait for scheduled alert]**
 
 ```bash
-curl "http://localhost:8000/alert/trigger?reagent_name=TSH&channel=labops-alerts"
+curl "https://labops-agent.onrender.com/alert/trigger?reagent_name=TSH"
 ```
 
 **[Screen: Watch the Block Kit alert appear in #labops-alerts]**
 
-The message shows (the severity header is **derived from the model**, not
-hardcoded — a non-critical reagent would render `🟡 ADVERTENCIA`):
+The message shows dynamic severity derived from the Prophet model:
 ```
 🔴 CRÍTICO — TSH
 
 Reactivo: TSH            Severidad: 🔴 CRÍTICO
-Stock actual: 680 u.     Stockout proyectado: ~4 días
+Stock actual: 680 u.     Stockout proyectado: ~3 días
 
-¿Por qué? La demanda de TSH aumenta ~80% en invierno
-(junio-agosto) en Argentina (~185 unid/día proyectado).
-El stock actual (680) no cubre el período de reorden de 7 días.
+¿Por qué? La demanda de TSH aumenta en invierno
+(junio–agosto) en Argentina (~197 unid/día proyectado en días hábiles,
+~138 en fines de semana). El stock actual (680) no cubre el
+período de reorden de 7 días.
 
 [📊 Ver proyección]  [🛒 Ordenar reactivo]  [👤 Asignar al equipo]
 
-🔬 DEMO — datos sintéticos calibrados con patrones reales AR
+⚠️ DEMO — datos sintéticos calibrados con patrones reales
 ```
 
 **Narration:**
 > "LabOps Agent just detected that TSH — the highest-volume test in
-> Argentine labs — will run out in 4 days. Demand spikes every winter
-> in Argentina, and current stock won't cover the reorder window.
+> Argentine labs — will run out in about 3 days. Demand spikes every winter
+> here, and current stock won't cover the reorder window.
 >
 > The agent explains WHY, not just WHAT. And it gives three actions
 > directly in the message."
@@ -84,11 +86,10 @@ El stock actual (680) no cubre el período de reorden de 7 días.
 
 **[Screen: Modal opens with pre-filled fields]**
 
-The modal shows:
 ```
 Ordenar Reactivo
 
-Reactivo:    TSH                    [pre-filled, read-only]
+Reactivo:    TSH                    [pre-filled]
 Cantidad:    [340] unidades          [suggested: 50% of current stock]
 Proveedor:   [▼ LabSupplier AR  ]   [dropdown]
              LabSupplier AR
@@ -108,18 +109,27 @@ Proveedor:   [▼ LabSupplier AR  ]   [dropdown]
 
 **[Screen: Thread reply appears + Canvas updates]**
 
-Thread reply (quantity matches the modal's suggested 340 = 50% of 680):
+Thread reply:
 ```
 ✅ Orden creada
-TSH · 340 unidades · LabSupplier AR
-Estado: pending · ID: #ORD-2026-001
-🔬 DEMO
+Reactivo: TSH
+Cantidad: 340.0
+Proveedor: LabSupplier AR
+Estado: pending
+
+⚠️ DEMO — datos sintéticos calibrados con patrones reales
 ```
 
 Canvas updates to show:
 ```
-Inventario LabOps — DEMO
-TSH · Stock: 680 · Última orden: pending
+LabOps Inventario
+
+🔴 TSH — 680 u. | 3 días | high
+🟡 Hemograma — 2100 u. | 12 días | critical
+🟢 Ionograma — 1850 u. | 12 días | medium
+🟢 Glucosa — 920 u. | 7 días | medium
+🟢 Urea — 760 u. | 10 días | low
+🟢 Creatinina — 640 u. | 8 días | medium
 ```
 
 **Narration:**
@@ -129,61 +139,52 @@ TSH · Stock: 680 · Última orden: pending
 
 ---
 
-### SEGMENT 4: Context from Channel History + Claude AI (2:00–2:45)
+### SEGMENT 4: Forecast + Channel History (2:00–2:45)
 
-**[Action: Click "📊 Ver proyección" or ask the agent directly]**
+**[Action: Click "📊 Ver proyección" in the alert thread]**
 
-Type in channel:
-```
-@LabOps resumen de alertas recientes de TSH
-```
+**[Screen: Thread opens with Block Kit fields + embedded chart]**
 
-**[Screen: Claude AI summary appears in thread]**
-
-The agent responds with **native Block Kit fields** (no ASCII tables) — a header,
-a summary line, one field per day, and (when `BACKEND_URL` is public) the embedded
-Prophet chart PNG:
 ```
 📊 Pronóstico — TSH
-Próximos 7 días · demanda media ~185 u/día · total ~1295 u
+Próximos 7 días · demanda media ~181 u/día · total ~1268 u
 Rango = banda de confianza 80% (Prophet)
 
-2026-06-29        2026-06-30        2026-07-01
-216 u · 198–235   214 u · 196–233   217 u · 199–236
+2026-06-30        2026-07-01        2026-07-02
+199 u · 180–217   200 u · 183–217   197 u · 178–216
 
-2026-07-02        2026-07-03        2026-07-04
-130 u · 112–149   131 u · 113–150   215 u · 197–234
-
-2026-07-05
-129 u · 111–148
+2026-07-03        2026-07-04        2026-07-05        2026-07-06
+198 u · 179–215   140 u · 122–158   137 u · 119–156   197 u · 179–216
 
 [ chart: Demand Forecast — TSH (line + 80% CI band) ]
-🔬 DEMO — datos sintéticos
+⚠️ DEMO — datos sintéticos calibrados con patrones reales
 ```
-> Note: weekends dip (~130 u) and weekdays peak (~215 u); at this rate the
-> current stock of 680 is consumed by **~2026-07-02 (~4 days)** — inside the
+
+> Note: weekends dip (~138 u) and weekdays peak (~197–200 u); at this rate
+> the current stock of 680 is consumed by **~2026-07-02 (~3 days)** — inside the
 > 7-day reorder window, hence the 🔴 CRÍTICO flag.
 
 **Narration:**
-> "The agent also surfaces 7-day demand forecasts with confidence bands.
-> And when you ask about recent history, Claude AI summarizes past
-> alerts from the channel history — giving full context without leaving Slack."
+> "The agent surfaces 7-day demand forecasts with 80% confidence bands,
+> and an embedded Prophet chart. You see the weekend dip in real time.
+> When you ask about recent history, the agent summarizes past alerts
+> from the channel — full context without leaving Slack."
 
-**[Optional beat — reasoning over MULTIPLE reagents, not just TSH]**
+**[Optional beat — multi-reagent reasoning]**
 
-Type in channel (or hit `GET /alert/check-all` for the deterministic version):
+Type in channel:
 ```
-@LabOps compará el riesgo de stockout de TSH, Hemograma e Ionograma
+@LabOps Agent compará el riesgo de stockout de TSH, Hemograma e Ionograma
 ```
 
 The agent calls `get_inventory` + `get_forecast` per reagent and reasons across
-the whole inventory — showing that the severity is computed, not hardcoded:
+the whole inventory — severity is computed, not hardcoded:
 ```
 🤖 LabOps Agent
-🔴 TSH        — ~4 días  → CRÍTICO  (pico de invierno)
-🟢 Hemograma  — >30 días → OK       (demanda estable)
-🟢 Ionograma  — >30 días → OK       (demanda estable)
-🔬 DEMO
+🔴 TSH        — ~3 días  → CRÍTICO  (pico de invierno)
+🟢 Hemograma  — >12 días → OK       (demanda estable)
+🟢 Ionograma  — >12 días → OK       (demanda estable)
+⚠️ DEMO
 ```
 
 **Narration:**
@@ -194,7 +195,7 @@ the whole inventory — showing that the severity is computed, not hardcoded:
 
 ### SEGMENT 5: Close (2:45–3:00)
 
-**[Screen: Show the #labops-alerts channel with the alert + thread]**
+**[Screen: Show the #labops-alerts channel with the alert + thread + Canvas]**
 
 **Narration:**
 > "LabOps Agent: predict, alert, act — all from Slack.
@@ -202,7 +203,8 @@ the whole inventory — showing that the severity is computed, not hardcoded:
 > Built on MCP Server, Slack Channel History API, and Claude API.
 > Calibrated with patterns derived from anonymized demand analysis.
 >
-> For the 900 accredited labs in Argentina managing critical
+> Live at labops-agent.onrender.com —
+> for the 900 accredited labs in Argentina managing critical
 > reagents every day."
 
 **[End screen or fade out]**
@@ -224,16 +226,16 @@ the whole inventory — showing that the severity is computed, not hardcoded:
 ## Backup Plan (if something breaks during recording)
 
 **If Block Kit alert doesn't appear:**
-→ Run `curl` command again, check FastAPI logs for errors
+→ Re-run the curl command, check Render logs
 
 **If modal doesn't open:**
-→ Verify Slack App has `channels:read` and `groups:read` scopes
+→ Verify Slack App has `chat:write` and `commands` scopes
 
 **If Canvas doesn't update:**
 → Show the thread confirmation instead — it's equally valid
 
-**If Claude AI summary is slow:**
-→ Skip segment 4 and go straight to segment 5 — demo still works
+**If chart doesn't render:**
+→ Native Block Kit fields still show the 7-day forecast; mention "chart renders when BACKEND_URL is public"
 
 ---
 
@@ -242,8 +244,9 @@ the whole inventory — showing that the severity is computed, not hardcoded:
 - [ ] Video ≤ 3:00 minutes
 - [ ] Uploaded to YouTube (or Vimeo) as **Public** or **Unlisted**
 - [ ] Link copied and ready for Devpost submission
-- [ ] Title: "LabOps Agent — Slack Agent for Good | AgentHack 2026"
+- [ ] Title: "LabOps Agent — Slack Agent Builder Challenge 2026"
 
 ---
 
-*Demo Script v1.0.0 · BIBLE-LABOPS-DEMO-FLOW · 2026-06-25*
+*Demo Script v2.0.0 · BIBLE-LABOPS-DEMO-FLOW · 2026-06-29*
+*Verified against live Render deploy and Slack sandbox.*
