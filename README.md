@@ -312,16 +312,23 @@ None — this project uses **Slack platform APIs** (Channel History API, Canvas 
 
 ## Demo Screenshots
 
-Record the ≤3-minute demo in your live Slack sandbox and replace these placeholders:
+Record the ≤3-minute demo in your live Slack sandbox (`labopsespacio`) and save captures to `docs/demo/`.
+All screenshots below have been verified in the live E2E run (Render deploy + Slack sandbox).
 
-| Timestamp | Screenshot | What to capture |
-|---|---|---|
-| 0:00-0:45 | `docs/demo/01_alert.png` | TSH alert in `#labops-alerts` with 🔴 CRITICAL badge + 3 buttons |
-| 0:45-1:30 | `docs/demo/02_forecast.png` | Thread reply: 7-day Prophet forecast table + channel history |
-| 1:30-2:15 | `docs/demo/03_order.png` | Modal "Ordenar reactivo" → confirmation → Canvas update |
-| 2:15-3:00 | `docs/demo/04_agent.png` | @mention interaction showing agent tool-use (e.g. `@LabOps Agent cuánto stock hay de TSH?`) |
+| Timestamp | Screenshot | What to capture | E2E verified |
+|---|---|---|---|
+| 0:00-0:45 | `docs/demo/01_alert.png` | TSH alert in `#labops-alerts` with 🔴 CRITICAL badge + 3 buttons | ✅ |
+| 0:45-1:30 | `docs/demo/02_forecast.png` | Thread reply: 7-day Prophet forecast fields + embedded chart PNG + channel history | ✅ |
+| 1:30-2:15 | `docs/demo/03_order.png` | Modal "Ordenar reactivo" → confirmation → Canvas inventory update | ✅ |
+| 2:15-3:00 | `docs/demo/04_agent.png` | `@LabOps Agent TSH` mention with agent response + action buttons | ✅ |
 
-> 💡 **Tip:** Use Slack's built-in screen recording (Cmd+Shift+5 on macOS, Win+Alt+R on Windows) or Loom for the GIF.
+> 💡 **Tip:** Use Slack's built-in screen recording (Cmd+Shift+5 on macOS, Win+Alt+R on Windows) or Loom for the GIF. See [`docs/demo/README.md`](docs/demo/README.md) for detailed capture instructions.
+
+**Verified numbers from live deploy:**
+- TSH demand: ~197 u/día (hábil), ~138 u/día (fin de semana)
+- Stockout projection: ~3 días con 680 u stock
+- Forecast chart: renders from `https://labops-agent.onrender.com/chart/forecast/TSH`
+- Canvas: persists via `lab_config` table in Supabase
 
 ## Data & Privacy
 
