@@ -10,10 +10,14 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+
+# Ensure local backend imports resolve when this module runs from repo root
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 

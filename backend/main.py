@@ -4,7 +4,11 @@ Exposes health check, MCP tools, prediction, and Slack event adapter.
 """
 import logging
 import os
+import sys
 from typing import Dict, Any
+
+# Ensure local backend imports resolve when uvicorn runs from repo root
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse

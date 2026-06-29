@@ -3,18 +3,20 @@ prediction.py — Prophet demand forecasting + stockout calculation.
 Calibrated with patterns derived from anonymized demand analysis (Argentina).
 """
 import os
+import sys
 import pickle
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, List
+
+# Ensure local backend imports resolve when this module runs from repo root
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+
 import numpy as np
 import pandas as pd
 from prophet import Prophet
 
-try:
-    from backend import database as db
-except ImportError:
-    import database as db
+import database as db
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 os.makedirs(MODELS_DIR, exist_ok=True)

@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import sys
 import time
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
@@ -19,6 +20,9 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Ensure local backend imports resolve when this module runs from repo root
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))  # Load .env from project root
 

@@ -15,7 +15,12 @@ Temperature=0 (immutable per CLAUDE.md).
 """
 import json
 import logging
+import os
+import sys
 from typing import Dict, Any, Optional
+
+# Ensure local backend imports resolve when this module runs from repo root
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 import claude_client as claude
 import mcp_server as mcp
