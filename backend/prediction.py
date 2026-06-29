@@ -4,10 +4,13 @@ Calibrated with patterns derived from anonymized demand analysis (Argentina).
 """
 import os
 import sys
+import logging
 import pickle
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, List
+
+logger = logging.getLogger(__name__)
 
 # Ensure local backend imports resolve when this module runs from repo root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
@@ -60,10 +63,16 @@ def _build_synthetic_history(reagent_name: str, days: int = 365) -> pd.DataFrame
 
 def _get_or_build_model(reagent_name: str) -> Prophet:
     """Load serialized Prophet model or train + cache on first call."""
-    model_path = os.path.join(MODELS_DIR, f"{reagent_name}_model.pkl")
+    model_path = os.path.join(MODELS_DIR, f"{reagent_name}_model_v2.pkl")
     if os.path.exists(model_path):
-        with open(model_path, "rb") as f:
-            return pickle.load(f)
+        # Re-train if model file is older than 1 day (data may have changed)
+        mtime = os.path.getmtime(model_path)
+        age_seconds = datetime.now().timestamp() - mtime
+        if age_seconds < 86400:
+            with open(model_path, "rb") as f:
+                return pickle.load(f)
+        else:
+            logger.info("Model for %s is stale (%.1f h old); retraining.", reagent_name, age_seconds / 3600)
 
     # Try real seeded demand_history first; fall back to synthetic on low data or error.
     try:
@@ -73,9 +82,19 @@ def _get_or_build_model(reagent_name: str) -> Prophet:
             df = df.rename(columns={"date": "ds", "quantity": "y"})
             df["ds"] = pd.to_datetime(df["ds"])
             df = df.sort_values("ds").reset_index(drop=True)
+            last_date = df["ds"].max()
+            days_stale = (datetime.now(timezone.utc) - last_date.replace(tzinfo=timezone.utc)).days
+            if days_stale > 7:
+                logger.warning(
+                    "DB demand_history for %s is stale (last %s, %d days ago); using synthetic history.",
+                    reagent_name, last_date.strftime("%Y-%m-%d"), days_stale
+                )
+                df = _build_synthetic_history(reagent_name, days=365)
         else:
+            logger.info("Only %d demand rows for %s; using synthetic history.", len(rows), reagent_name)
             df = _build_synthetic_history(reagent_name, days=365)
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to load demand_history for %s: %s; using synthetic.", reagent_name, e)
         df = _build_synthetic_history(reagent_name, days=365)
 
     # Pin randomness for reproducible demo (Prophet L-BFGS is deterministic for same data + seed)
