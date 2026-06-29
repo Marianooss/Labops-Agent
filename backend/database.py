@@ -237,33 +237,40 @@ def get_alerts(reagent_name: Optional[str] = None, limit: int = 50) -> List[Dict
 # ---------------------------------------------------------------------------
 def get_lab_config(key: str) -> Optional[str]:
     """Return config value by key, or None if not set."""
-    if _use_pg:
-        sql = "SELECT value FROM lab_config WHERE key = %s LIMIT 1"
-        rows = _pg_execute(sql, (key,), fetch=True)
-        return rows[0]["value"] if rows else None
-    sb = get_supabase()
-    resp = sb.table("lab_config").select("value").eq("key", key).limit(1).execute()
-    if resp.data:
-        return resp.data[0]["value"]
+    try:
+        if _use_pg:
+            sql = "SELECT value FROM lab_config WHERE key = %s LIMIT 1"
+            rows = _pg_execute(sql, (key,), fetch=True)
+            return rows[0]["value"] if rows else None
+        sb = get_supabase()
+        resp = sb.table("lab_config").select("value").eq("key", key).limit(1).execute()
+        if resp.data:
+            return resp.data[0]["value"]
+    except Exception as e:
+        logger.warning("get_lab_config(%s) failed (table may not exist): %s", key, e)
     return None
 
 
 def set_lab_config(key: str, value: str) -> Dict[str, Any]:
     """Upsert a config key-value pair."""
-    if _use_pg:
-        sql = (
-            "INSERT INTO lab_config (key, value, updated_at) VALUES (%s, %s, now()) "
-            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now() "
-            "RETURNING *"
+    try:
+        if _use_pg:
+            sql = (
+                "INSERT INTO lab_config (key, value, updated_at) VALUES (%s, %s, now()) "
+                "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now() "
+                "RETURNING *"
+            )
+            return _pg_execute_one(sql, (key, value))
+        sb = get_supabase()
+        resp = (
+            sb.table("lab_config")
+            .upsert({"key": key, "value": value, "updated_at": "now()"})
+            .execute()
         )
-        return _pg_execute_one(sql, (key, value))
-    sb = get_supabase()
-    resp = (
-        sb.table("lab_config")
-        .upsert({"key": key, "value": value, "updated_at": "now()"})
-        .execute()
-    )
-    return resp.data[0] if resp.data else {}
+        return resp.data[0] if resp.data else {}
+    except Exception as e:
+        logger.warning("set_lab_config(%s) failed (table may not exist): %s", key, e)
+    return {}
 
 
 # ---------------------------------------------------------------------------
