@@ -877,14 +877,35 @@ def start_socket_mode_in_thread():
     public HTTPS chart endpoint AND hold the Socket Mode websocket — which is why
     Socket Mode cannot run on Vercel-style serverless functions. Returns the
     thread (or None if no app token is configured).
+
+    NOTE: On Windows, `signal.signal` only works in the main thread.
+    We wrap it safely so the daemon thread can start without crashing.
     """
     import threading
+    import signal
 
     if not SLACK_APP_TOKEN:
         logger.warning("SLACK_APP_TOKEN not set — Socket Mode thread not started.")
         return None
+
+    def _start_handler_safe(handler):
+        """Wrap handler.start() so signal errors in non-main threads are ignored."""
+        original_signal = signal.signal
+
+        def _safe_signal(sig, action):
+            try:
+                return original_signal(sig, action)
+            except ValueError:
+                return None
+
+        signal.signal = _safe_signal
+        try:
+            handler.start()
+        finally:
+            signal.signal = original_signal
+
     handler = SocketModeHandler(bolt_app, SLACK_APP_TOKEN)
-    thread = threading.Thread(target=handler.start, name="socket-mode", daemon=True)
+    thread = threading.Thread(target=lambda: _start_handler_safe(handler), name="socket-mode", daemon=True)
     thread.start()
     logger.info("Socket Mode started in background thread (co-hosted with web service).")
     return thread
