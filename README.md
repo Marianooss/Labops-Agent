@@ -116,6 +116,7 @@ Tools available:
 
 > **Demo video (≤3 min):** _<add YouTube/Vimeo link here once recorded>_ — this is
 > the canonical proof that the agent runs live in a real Slack sandbox.
+> **Live deploy:** `https://labops-agent.onrender.com` (Render persistent host — Socket Mode + FastAPI co-hosted)
 > **Sandbox workspace:** `https://labopsespacio.slack.com` (invite-only sandbox).
 
 ### Reproduce the live deploy (judge-reachable, chart renders)
@@ -128,7 +129,7 @@ this deploys to Render/Railway/Fly — **not** Vercel serverless (see
 1. Join the [Slack Developer Program](https://api.slack.com/developer-program) and create a Developer Sandbox workspace.
 2. Create a new app from [`slack-manifest.json`](slack-manifest.json), install it, and copy the Bot + App tokens.
 3. Deploy with the included [`render.yaml`](render.yaml) blueprint (one persistent web service hosts both the chart endpoint and the Socket Mode websocket).
-4. After the first deploy, set `BACKEND_URL=https://<your-service>.onrender.com` and redeploy so the forecast chart renders in Slack.
+4. After the first deploy, set `BACKEND_URL=https://labops-agent.onrender.com` (or your service URL) and redeploy so the forecast chart renders in Slack.
 
 **Local + tunnel (for recording the demo on your machine):**
 
@@ -247,7 +248,7 @@ both:
 
 ```
 Render → New → Blueprint → select this repo → fill the secret env vars
-→ after first deploy, set BACKEND_URL=https://<service>.onrender.com → redeploy
+→ after first deploy, set `BACKEND_URL=https://labops-agent.onrender.com` → redeploy
 ```
 
 Railway and Fly.io work identically with the same [`Dockerfile`](Dockerfile)
