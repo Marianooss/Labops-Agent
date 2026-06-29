@@ -125,8 +125,21 @@ def get_forecast(reagent_name: str, days: int = 30) -> Dict[str, Any]:
     future_slice = forecast[forecast["ds"] > pd.Timestamp(datetime.now(timezone.utc).date())].head(days)
     daily_demand = future_slice[["ds", "yhat", "yhat_lower", "yhat_upper"]].to_dict(orient="records")
 
-    # Calculate cumulative demand for stockout projection
-    # We need current stock from inventory (caller should pass it; here we default)
+    # Fallback: stale training data can produce no future dates.
+    # Force synthetic rebuild and retry once.
+    if not daily_demand:
+        logger.warning(
+            "Model for %s produced empty daily_demand — forcing synthetic rebuild.", reagent_name
+        )
+        model_path = os.path.join(MODELS_DIR, f"{reagent_name}_model_v2.pkl")
+        if os.path.exists(model_path):
+            os.remove(model_path)
+        model = _get_or_build_model(reagent_name)
+        future = model.make_future_dataframe(periods=days)
+        forecast = model.predict(future)
+        future_slice = forecast[forecast["ds"] > pd.Timestamp(datetime.now(timezone.utc).date())].head(days)
+        daily_demand = future_slice[["ds", "yhat", "yhat_lower", "yhat_upper"]].to_dict(orient="records")
+
     return {
         "reagent_name": reagent_name,
         "forecast_days": days,
