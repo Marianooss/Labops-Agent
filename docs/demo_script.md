@@ -23,195 +23,73 @@ curl "https://labops-agent.onrender.com/alert/trigger?reagent_name=TSH"
 
 ---
 
-## Demo Script
+## Demo Script — Final Voiceover (≤ 3 Minutes)
+
+> **TTS Voice Recommendation:** Male — Professional/Corporate or Financial/Narrator, US or UK neutral accent. Speed: **1.0x**.
 
 ---
 
-### SEGMENT 1: The Problem (0:00–0:30)
+**[00:00]**
 
-**[Screen: Show #labops-alerts channel]**
-
-**Narration:**
-> "Clinical laboratories depend on reagents to run tests. When a reagent
-> runs out, testing stops — and patients wait.
->
-> Current solutions send alerts when stock is already low. By then,
-> it's too late to avoid the stockout.
->
-> LabOps Agent predicts stockouts **before they happen** — and lets
-> lab staff act directly from Slack."
+> "In the healthcare sector, a reagent stockout in a clinical laboratory is not just a logistics issue; it is a critical operational failure that directly delays patient diagnostics."
 
 ---
 
-### SEGMENT 2: The Prediction Fires (0:30–1:00)
+**[00:09]**
 
-**[Action: Trigger the alert via curl or wait for scheduled alert]**
-
-```bash
-curl "https://labops-agent.onrender.com/alert/trigger?reagent_name=TSH"
-```
-
-**[Screen: Watch the Block Kit alert appear in #labops-alerts]**
-
-The message shows dynamic severity derived from the Prophet model:
-```
-🔴 CRÍTICO — TSH
-
-Reactivo: TSH            Severidad: 🔴 CRÍTICO
-Stock actual: 680 u.     Stockout proyectado: ~3 días
-
-¿Por qué? La demanda de TSH aumenta en invierno
-(junio–agosto) en Argentina (~197 unid/día proyectado en días hábiles,
-~138 en fines de semana). El stock actual (680) no cubre el
-período de reorden de 7 días.
-
-[📊 Ver proyección]  [🛒 Ordenar reactivo]  [👤 Asignar al equipo]
-
-⚠️ DEMO — datos sintéticos calibrados con patrones reales
-```
-
-**Narration:**
-> "LabOps Agent just detected that TSH — the highest-volume test in
-> Argentine labs — will run out in about 3 days. Demand spikes every winter
-> here, and current stock won't cover the reorder window.
->
-> The agent explains WHY, not just WHAT. And it gives three actions
-> directly in the message."
+> "Traditional solutions fail because they rely on static thresholds, completely ignoring biological seasonality and demand spikes. This leads to emergency reorder costs up to five times higher and unsustainable lead times."
 
 ---
 
-### SEGMENT 3: Taking Action (1:00–2:00)
+**[00:21]**
 
-**[Action: Click "🛒 Ordenar reactivo"]**
-
-**[Screen: Modal opens with pre-filled fields]**
-
-```
-Ordenar Reactivo
-
-Reactivo:    TSH                    [pre-filled]
-Cantidad:    [340] unidades          [suggested: 50% of current stock]
-Proveedor:   [▼ LabSupplier AR  ]   [dropdown]
-             LabSupplier AR
-             Bioquímica SA
-             LabMed Corp
-             Diagnósticos Plus
-
-[Cancelar]                    [✅ Confirmar Orden]
-```
-
-**Narration:**
-> "One click opens the order modal. The reagent is pre-filled,
-> the quantity is suggested based on the demand forecast, and
-> the supplier dropdown pulls from our approved list."
-
-**[Action: Select supplier, click Confirmar Orden]**
-
-**[Screen: Thread reply appears + Canvas updates]**
-
-Thread reply:
-```
-✅ Orden creada
-Reactivo: TSH
-Cantidad: 340.0
-Proveedor: LabSupplier AR
-Estado: pending
-
-⚠️ DEMO — datos sintéticos calibrados con patrones reales
-```
-
-Canvas updates to show:
-```
-LabOps Inventario
-
-🔴 TSH — 680 u. | 3 días | high
-🟡 Hemograma — 2100 u. | 12 días | critical
-🟢 Ionograma — 1850 u. | 12 días | medium
-🟢 Glucosa — 920 u. | 7 días | medium
-🟢 Urea — 760 u. | 10 días | low
-🟢 Creatinina — 640 u. | 8 días | medium
-```
-
-**Narration:**
-> "Order confirmed. A thread reply logs the transaction.
-> The inventory Canvas updates automatically.
-> All from Slack. No LIMS login required."
+> "To solve this, we designed LabOps Agent with a Slack-First philosophy. Our architecture utilizes a persistent Socket Mode connection integrated with an asynchronous FastAPI backend."
 
 ---
 
-### SEGMENT 4: Forecast + Channel History (2:00–2:45)
+**[00:32]**
 
-**[Action: Click "📊 Ver proyección" in the alert thread]**
-
-**[Screen: Thread opens with Block Kit fields + embedded chart]**
-
-```
-📊 Pronóstico — TSH
-Próximos 7 días · demanda media ~181 u/día · total ~1268 u
-Rango = banda de confianza 80% (Prophet)
-
-2026-06-30        2026-07-01        2026-07-02
-199 u · 180–217   200 u · 183–217   197 u · 178–216
-
-2026-07-03        2026-07-04        2026-07-05        2026-07-06
-198 u · 179–215   140 u · 122–158   137 u · 119–156   197 u · 179–216
-
-[ chart: Demand Forecast — TSH (line + 80% CI band) ]
-⚠️ DEMO — datos sintéticos calibrados con patrones reales
-```
-
-> Note: weekends dip (~138 u) and weekdays peak (~197–200 u); at this rate
-> the current stock of 680 is consumed by **~2026-07-02 (~3 days)** — inside the
-> 7-day reorder window, hence the 🔴 CRÍTICO flag.
-
-**Narration:**
-> "The agent surfaces 7-day demand forecasts with 80% confidence bands,
-> and an embedded Prophet chart. You see the weekend dip in real time.
-> When you ask about recent history, the agent summarizes past alerts
-> from the channel — full context without leaving Slack."
-
-**[Optional beat — multi-reagent reasoning]**
-
-Type in channel:
-```
-@LabOps Agent compará el riesgo de stockout de TSH, Hemograma e Ionograma
-```
-
-The agent calls `get_inventory` + `get_forecast` per reagent and reasons across
-the whole inventory — severity is computed, not hardcoded:
-```
-🤖 LabOps Agent
-🔴 TSH        — ~3 días  → CRÍTICO  (pico de invierno)
-🟢 Hemograma  — >12 días → OK       (demanda estable)
-🟢 Ionograma  — >12 días → OK       (demanda estable)
-⚠️ DEMO
-```
-
-**Narration:**
-> "And it reasons across the whole inventory — TSH is critical because of the
-> winter spike, while Hemograma and Ionograma stay stable. Same model, per-reagent."
+> "Through a decoupled Model Context Protocol server, we orchestrate a predictive engine powered by Meta Prophet and a Supabase database, leveraging Claude 3.5 Sonnet for context synthesis."
 
 ---
 
-### SEGMENT 5: Close (2:45–3:00)
+**[00:44]**
 
-**[Screen: Show the #labops-alerts channel with the alert + thread + Canvas]**
-
-**Narration:**
-> "LabOps Agent: predict, alert, act — all from Slack.
->
-> Built on MCP Server, Slack Channel History API, and Claude API.
-> Calibrated with patterns derived from anonymized demand analysis.
->
-> Live at labops-agent.onrender.com —
-> for the 900 accredited labs in Argentina managing critical
-> reagents every day."
-
-**[End screen or fade out]**
+> "Let's see the solution in action. From a completely clean Slack channel, a user mentions the agent to request the stock prediction for the TSH reagent."
 
 ---
 
-## Recording Notes
+**[00:54]**
+
+> "The agent responds natively and instantly with a structured Block Kit message. By clicking 'View forecast,' the AI seamlessly retrieves the thread history and deploys an advanced predictive chart with an eighty percent confidence interval."
+
+---
+
+**[01:27]**
+
+> "If stock is running low, the user can trigger a reorder directly from the interface. Upon confirming the purchase of three hundred and forty units, data synchronizes instantly with Supabase."
+
+---
+
+**[01:44]**
+
+> "This reactively updates the LabOps Inventory Canvas on the right side in real time, displaying the new 'High' stock status to the entire lab team."
+
+---
+
+**[01:54]**
+
+> "Finally, the workflow closes by assigning the task review to a team member natively, transforming Slack into a highly efficient, predictive, and automated operations hub for clinical management."
+
+---
+
+**[End screen]**
+
+> "LabOps Agent — predict, alert, act. All from Slack."
+
+---
+
+## Production Notes
 
 - **No camera needed** — screen recording only
 - **No slides** — the system running live is the demo
