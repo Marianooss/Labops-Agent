@@ -104,12 +104,14 @@ class E2ESlackHandlers(unittest.TestCase):
             "message": {"ts": "1234567890.123456"},
         }
         client = MagicMock()
+        client.conversations_replies.return_value = {"messages": []}
 
         handle_view_forecast(ack=ack, body=body, client=client)
 
-        # chat_postMessage is called for forecast + history + search results
+        # chat_postMessage is called for forecast + thread history (2 calls)
         self.assertTrue(client.chat_postMessage.called, "chat_postMessage was never called")
         call_kwargs_list = [c[1] for c in client.chat_postMessage.call_args_list]
+        self.assertEqual(len(call_kwargs_list), 2, "Expected 2 chat_postMessage calls (forecast + thread history)")
 
         # Find the forecast call (has header block)
         forecast_call = None

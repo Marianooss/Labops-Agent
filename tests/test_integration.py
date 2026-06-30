@@ -41,17 +41,10 @@ class TestViewForecast(unittest.TestCase):
 
         ack = FakeAck()
         client = MagicMock()
-        client.conversations_history.return_value = {
+        client.conversations_replies.return_value = {
             "messages": [
-                {"text": "TSH alert", "ts": "123.456", "bot_id": "B1"},
+                {"text": "🔴 CRÍTICO — TSH alert", "ts": "123.456", "bot_id": "B1"},
             ]
-        }
-        client.search_messages.return_value = {
-            "messages": {
-                "matches": [
-                    {"text": "TSH stock low", "ts": "123.456", "channel": {"name": "labops-alerts"}},
-                ]
-            }
         }
         body = {
             "actions": [{"value": "TSH"}],
@@ -63,6 +56,7 @@ class TestViewForecast(unittest.TestCase):
 
         # Should post forecast with NATIVE Block Kit fields (no ASCII tables)
         calls = client.chat_postMessage.call_args_list
+        self.assertEqual(len(calls), 2, "Expected forecast + thread history (2 calls)")
         self.assertTrue(any("Pronóstico" in str(c) for c in calls))
         forecast_call = [c for c in calls if "Pronóstico" in str(c)][0]
         blocks = forecast_call[1]["blocks"]
@@ -72,12 +66,10 @@ class TestViewForecast(unittest.TestCase):
         self.assertFalse(any("```" in str(b) for b in blocks))
         # With no public BACKEND_URL, the chart image is omitted (not broken)
         self.assertFalse(any(b.get("type") == "image" for b in blocks))
-        # Should post channel history summary (either with alerts or empty state)
+        # Should post thread history summary (either with alerts or empty state)
         self.assertTrue(any("alerta" in str(c).lower() for c in calls))
-        # Should post workspace search results
-        self.assertTrue(any("Búsqueda" in str(c) for c in calls))
-        # Should call search.messages
-        client.search_messages.assert_called_once()
+        # Should call conversations_replies with bot token (not search.messages)
+        client.conversations_replies.assert_called_once()
 
     @patch("slack_client.prediction.get_forecast")
     @patch("slack_client.db.get_lab_config")
@@ -92,8 +84,7 @@ class TestViewForecast(unittest.TestCase):
 
         ack = FakeAck()
         client = MagicMock()
-        client.conversations_history.return_value = {"messages": []}
-        client.search_messages.return_value = {"messages": {"matches": []}}
+        client.conversations_replies.return_value = {"messages": []}
         body = {
             "actions": [{"value": "TSH"}],
             "channel": {"id": "C123"},
@@ -262,45 +253,40 @@ class TestAppMention(unittest.TestCase):
         self.assertIn("LabOps Agent", text)
 
 
-class TestSearchMessages(unittest.TestCase):
-    """search.messages uses SLACK_USER_TOKEN when available"""
+class TestThreadHistory(unittest.TestCase):
+    """conversations_replies fetches thread history with bot token (xoxb-)"""
 
-    @patch("slack_sdk.WebClient")
-    @patch("slack_client.SLACK_USER_TOKEN", "xoxp-test-user-token")
+    @patch("slack_client.prediction.get_forecast")
+    @patch("slack_client.db.get_lab_config")
     @patch.dict(os.environ, {"LABOPS_ALERTS_CHANNEL_ID": "C456"})
-    def test_user_token_used_for_search(self, mock_webclient_cls):
-        mock_user_client = MagicMock()
-        mock_user_client.search_messages.return_value = {
-            "messages": {
-                "matches": [
-                    {"text": "TSH low", "ts": "123.456", "channel": {"name": "labops-alerts"}},
-                ]
-            }
-        }
-        mock_webclient_cls.return_value = mock_user_client
-
-        mock_get_forecast = MagicMock()
+    def test_bot_token_used_for_thread_history(self, mock_get_lab_config, mock_get_forecast):
         mock_get_forecast.return_value = {
             "daily_demand": [
                 {"date": "2026-06-27", "predicted_qty": 200, "lower_bound": 180, "upper_bound": 220},
             ]
         }
+        mock_get_lab_config.return_value = None
 
-        with patch("slack_client.prediction.get_forecast", mock_get_forecast):
-            with patch("slack_client.db.get_lab_config", return_value=None):
-                ack = FakeAck()
-                client = MagicMock()
-                client.conversations_history.return_value = {"messages": []}
-                body = {
-                    "actions": [{"value": "TSH"}],
-                    "channel": {"id": "C123"},
-                    "message": {"ts": "1234567890.123456"},
-                }
-                handle_view_forecast(ack, body, client)
+        ack = FakeAck()
+        client = MagicMock()
+        client.conversations_replies.return_value = {
+            "messages": [
+                {"text": "🔴 CRÍTICO — TSH stock low", "ts": "123.456", "bot_id": "B1"},
+            ]
+        }
+        body = {
+            "actions": [{"value": "TSH"}],
+            "channel": {"id": "C123"},
+            "message": {"ts": "1234567890.123456"},
+        }
 
-        # User client should have been created with the user token
-        mock_webclient_cls.assert_called_once_with(token="xoxp-test-user-token")
-        mock_user_client.search_messages.assert_called_once()
+        handle_view_forecast(ack, body, client)
+
+        # Bot client should call conversations_replies (not search.messages)
+        client.conversations_replies.assert_called_once()
+        call_kwargs = client.conversations_replies.call_args[1]
+        self.assertEqual(call_kwargs["channel"], "C123")
+        self.assertEqual(call_kwargs["ts"], "1234567890.123456")
 
 
 class TestDynamicSeverity(unittest.TestCase):

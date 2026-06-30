@@ -371,102 +371,53 @@ def handle_view_forecast(ack, body, client):
         )
 
         # -------------------------------------------------------------------
-        # TASK 1 — Slack Channel History API (conversations.history)
+        # Thread history via conversations_replies (bot token xoxb-)
+        # Replaces search.messages (requires xoxp- user token) with a native
+        # bot-token call that fetches messages inside the current thread.
         # -------------------------------------------------------------------
-        LABOPS_ALERTS_CHANNEL_ID = os.environ.get("LABOPS_ALERTS_CHANNEL_ID", "")
-        history_text = ""
+        thread_history_text = ""
         try:
-            if LABOPS_ALERTS_CHANNEL_ID:
-                history_result = client.conversations_history(
-                    channel=LABOPS_ALERTS_CHANNEL_ID,
-                    limit=20,
+            if channel and thread_ts:
+                replies_result = client.conversations_replies(
+                    channel=channel,
+                    ts=thread_ts,
+                    limit=10,
                 )
-                messages = history_result.get("messages", [])
-                reagent_mentions = [
+                messages = replies_result.get("messages", [])
+                alert_msgs = [
                     m for m in messages
                     if reagent.upper() in m.get("text", "").upper()
-                    and m.get("bot_id")
+                    and ("🔴 CRÍTICO" in m.get("text", "")
+                         or "🟡 ADVERTENCIA" in m.get("text", "")
+                         or "📊 Pronóstico" in m.get("text", ""))
                 ][:3]
-                if reagent_mentions:
-                    alert_lines = []
-                    for msg in reagent_mentions:
+                if alert_msgs:
+                    lines = []
+                    for msg in alert_msgs:
                         ts = msg.get("ts", "")
                         date = ts.split(".")[0] if ts else "N/A"
-                        text_snippet = msg.get("text", "")[:80]
-                        alert_lines.append(f"• `{date}` — {text_snippet}...")
-                    history_text = (
-                        f"*📋 {len(reagent_mentions)} alerta(s) reciente(s) de `{reagent}`:*\n"
-                        + "\n".join(alert_lines)
+                        snippet = msg.get("text", "")[:80]
+                        lines.append(f"• `{date}` — {snippet}...")
+                    thread_history_text = (
+                        f"*� {len(alert_msgs)} alerta(s) previa(s) de `{reagent}` en este hilo:*\n"
+                        + "\n".join(lines)
                     )
                 else:
-                    history_text = f"*📋 Sin alertas previas de `{reagent}` en el historial reciente.*"
+                    thread_history_text = f"*� Sin alertas previas de `{reagent}` en este hilo.*"
             else:
-                history_text = "*📋 `LABOPS_ALERTS_CHANNEL_ID` no configurado. Agregalo a .env.*"
+                thread_history_text = "*📋 No hay hilo activo para consultar historial.*"
         except Exception as e:
-            logger.error("Channel history fetch failed: %s", e, exc_info=True)
-            history_text = f"*📋 No se pudo obtener historial: {str(e)} (verificá scope `channels:history`).*"
+            logger.error("Thread history fetch failed: %s", e, exc_info=True)
+            thread_history_text = f"*� No se pudo obtener historial del hilo: {str(e)}.*"
 
         client.chat_postMessage(
             channel=channel,
             thread_ts=thread_ts,
             blocks=[
-                {"type": "section", "text": {"type": "mrkdwn", "text": history_text}},
+                {"type": "section", "text": {"type": "mrkdwn", "text": thread_history_text}},
                 _demo_badge(),
             ],
             text=f"Historial {reagent}",
-        )
-
-        # -------------------------------------------------------------------
-        # TASK 2 — Slack Real-Time Search API (search.messages)
-        # -------------------------------------------------------------------
-        # search.messages requires a USER token (xoxp-).
-        # If SLACK_USER_TOKEN is set, we use it; otherwise the bot token
-        # returns empty results gracefully.
-        search_text = ""
-        try:
-            if SLACK_USER_TOKEN:
-                from slack_sdk import WebClient
-                user_client = WebClient(token=SLACK_USER_TOKEN)
-                search_result = user_client.search_messages(
-                    query=f"{reagent} in:labops-alerts",
-                    count=5,
-                    sort="timestamp",
-                    sort_dir="desc",
-                )
-            else:
-                search_result = client.search_messages(
-                    query=f"{reagent} in:labops-alerts",
-                    count=5,
-                    sort="timestamp",
-                    sort_dir="desc",
-                )
-            matches = search_result.get("messages", {}).get("matches", [])
-            if matches:
-                search_lines = []
-                for msg in matches[:3]:
-                    channel_name = msg.get("channel", {}).get("name", "unknown")
-                    ts = msg.get("ts", "")
-                    date = ts.split(".")[0] if ts else "N/A"
-                    snippet = msg.get("text", "")[:80]
-                    search_lines.append(f"• `{date}` — #{channel_name}: {snippet}...")
-                search_text = (
-                    f"*🔍 {len(matches)} resultado(s) de búsqueda en el workspace para `{reagent}`:*\n"
-                    + "\n".join(search_lines)
-                )
-            else:
-                search_text = f"*🔍 Sin resultados de búsqueda para `{reagent}` en el workspace.*"
-        except Exception as e:
-            logger.error("Search messages failed: %s", e, exc_info=True)
-            search_text = f"*🔍 No se pudo ejecutar búsqueda: {str(e)} (verificá scope `search:read` y token de usuario).*"
-
-        client.chat_postMessage(
-            channel=channel,
-            thread_ts=thread_ts,
-            blocks=[
-                {"type": "section", "text": {"type": "mrkdwn", "text": search_text}},
-                _demo_badge(),
-            ],
-            text=f"Búsqueda {reagent}",
         )
     except Exception as exc:
         logger.error("handle_view_forecast failed: %s", exc, exc_info=True)
