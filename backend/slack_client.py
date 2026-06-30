@@ -399,16 +399,16 @@ def handle_view_forecast(ack, body, client):
                         snippet = msg.get("text", "")[:80]
                         lines.append(f"• `{date}` — {snippet}...")
                     thread_history_text = (
-                        f"*� {len(alert_msgs)} alerta(s) previa(s) de `{reagent}` en este hilo:*\n"
+                        f"*📜 {len(alert_msgs)} alerta(s) previa(s) de `{reagent}` en este hilo:*\n"
                         + "\n".join(lines)
                     )
                 else:
-                    thread_history_text = f"*� Sin alertas previas de `{reagent}` en este hilo.*"
+                    thread_history_text = f"*✅ Sin alertas previas de `{reagent}` en este hilo.*"
             else:
                 thread_history_text = "*📋 No hay hilo activo para consultar historial.*"
         except Exception as e:
             logger.error("Thread history fetch failed: %s", e, exc_info=True)
-            thread_history_text = f"*� No se pudo obtener historial del hilo: {str(e)}.*"
+            thread_history_text = f"*⚠️ No se pudo obtener historial del hilo: {str(e)}.*"
 
         client.chat_postMessage(
             channel=channel,
