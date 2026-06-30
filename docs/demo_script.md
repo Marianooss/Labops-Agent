@@ -29,61 +29,71 @@ curl "https://labops-agent.onrender.com/alert/trigger?reagent_name=TSH"
 
 ---
 
-**[00:00]**
+**[00:00] — Opening Title Card**
+
+> "Welcome to the LabOps Agent demonstration.
+> LabOps Agent. Slack-First predictive operations for clinical laboratories.
+> A predictive operations platform that transforms Slack into an intelligent clinical inventory management hub."
+
+*(Visual: LabOps logo centered on dark background with product name and tagline. Duration: ~12 seconds.)*
+
+---
+
+**[00:12]**
 
 > "In the healthcare sector, a reagent stockout in a clinical laboratory is not just a logistics issue; it is a critical operational failure that directly delays patient diagnostics."
 
 ---
 
-**[00:09]**
+**[00:21]**
 
 > "Traditional solutions fail because they rely on static thresholds, completely ignoring biological seasonality and demand spikes. This leads to emergency reorder costs up to five times higher and unsustainable lead times."
 
 ---
 
-**[00:21]**
+**[00:33]**
 
 > "To solve this, we designed LabOps Agent with a Slack-First philosophy. Our architecture utilizes a persistent Socket Mode connection integrated with an asynchronous FastAPI backend."
 
 ---
 
-**[00:32]**
+**[00:44]**
 
-> "Through a decoupled Model Context Protocol server, we orchestrate a predictive engine powered by Meta Prophet and a Supabase database, leveraging Claude 3.5 Sonnet for context synthesis."
+> "Through a decoupled Model Context Protocol server, we orchestrate a predictive engine powered by Meta Prophet and a Supabase database, leveraging Claude 4.6 Sonnet for context synthesis."
 
 ---
 
-**[00:44]**
+**[00:56]**
 
 > "Let's see the solution in action. From a completely clean Slack channel, a user mentions the agent to request the stock prediction for the TSH reagent."
 
 ---
 
-**[00:54]**
+**[01:06]**
 
 > "The agent responds natively and instantly with a structured Block Kit message. By clicking 'View forecast,' the AI seamlessly retrieves the thread history and deploys an advanced predictive chart with an eighty percent confidence interval."
 
 ---
 
-**[01:27]**
+**[01:39]**
 
 > "If stock is running low, the user can trigger a reorder directly from the interface. Upon confirming the purchase of three hundred and forty units, data synchronizes instantly with Supabase."
 
 ---
 
-**[01:44]**
+**[01:56]**
 
 > "This reactively updates the LabOps Inventory Canvas on the right side in real time, displaying the new 'High' stock status to the entire lab team."
 
 ---
 
-**[01:54]**
+**[02:06]**
 
 > "Finally, the workflow closes by assigning the task review to a team member natively, transforming Slack into a highly efficient, predictive, and automated operations hub for clinical management."
 
 ---
 
-**[End screen]**
+**[02:17] — End screen**
 
 > "LabOps Agent — predict, alert, act. All from Slack."
 

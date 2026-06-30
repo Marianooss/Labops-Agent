@@ -114,8 +114,7 @@ Tools available:
 
 ## Try it Live
 
-> **Demo video (≤3 min):** _<add YouTube/Vimeo link here once recorded>_ — this is
-> the canonical proof that the agent runs live in a real Slack sandbox.
+> **Demo video (≤3 min):** `demo/video/LabOps_Agent_Demo_Complete.mp4` — to be uploaded to YouTube (Unlisted) for Devpost submission.
 > **Live deploy:** `https://labops-agent.onrender.com` (Render persistent host — Socket Mode + FastAPI co-hosted)
 > **Sandbox workspace:** `https://labopsespacio.slack.com` (invite-only sandbox).
 
@@ -312,17 +311,23 @@ None — this project uses **Slack platform APIs** (Channel History API, Canvas 
 
 ## Demo Screenshots
 
-Record the ≤3-minute demo in your live Slack sandbox (`labopsespacio`) and save captures to `docs/demo/`.
-All screenshots below have been verified in the live E2E run (Render deploy + Slack sandbox).
+Extracted from the final demo video (`demo/video/LabOps_Agent_Demo_Complete.mp4`).
 
-| Timestamp | Screenshot | What to capture | E2E verified |
-|---|---|---|---|
-| 0:00-0:45 | `docs/demo/01_alert.png` | TSH alert in `#labops-alerts` with 🔴 CRITICAL badge + 3 buttons | ✅ |
-| 0:45-1:30 | `docs/demo/02_forecast.png` | Thread reply: 7-day Prophet forecast fields + embedded chart PNG + channel history | ✅ |
-| 1:30-2:15 | `docs/demo/03_order.png` | Modal "Ordenar reactivo" → confirmation → Canvas inventory update | ✅ |
-| 2:15-3:00 | `docs/demo/04_agent.png` | `@LabOps Agent TSH` mention with agent response + action buttons | ✅ |
+### Block Kit Alert
+![TSH Critical Alert](docs/demo/01_alert.png)
+Real-time Block Kit alert fired when Prophet predicts a stockout within the reorder lead time window.
 
-> 💡 **Tip:** Use Slack's built-in screen recording (Cmd+Shift+5 on macOS, Win+Alt+R on Windows) or Loom for the GIF. See [`docs/demo/README.md`](docs/demo/README.md) for detailed capture instructions.
+### Order Modal
+![Order Reagent Modal](docs/demo/02_order_modal.png)
+Pre-filled order modal with model-suggested quantity and supplier dropdown — one click creates the order in Supabase.
+
+### Demand Forecast Chart
+![7-Day Forecast](docs/demo/03_forecast_chart.png)
+Prophet-generated forecast chart with 80% confidence interval, rendered live and embedded in the Slack thread.
+
+### Canvas Update
+![Inventory Canvas](docs/demo/04_canvas_update.png)
+Inventory Canvas updates in real time after an order is confirmed.
 
 **Verified numbers from live deploy:**
 - TSH demand: ~197 u/día (hábil), ~138 u/día (fin de semana)
