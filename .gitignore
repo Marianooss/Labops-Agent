@@ -52,6 +52,8 @@ Thumbs.db
 test_endpoints.ps1
 *.ps1
 SESSION_STATE.md
+SESSION_STATE.md.bak
+concat_list.txt
 ADVERSARIAL_JUDGE_PROMPT.md
 AGENTS.md
 BIBLE.md

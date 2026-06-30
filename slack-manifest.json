@@ -20,16 +20,11 @@
         "groups:history",
         "im:write",
         "users:read",
-        "users:read.email",
-        "team:read",
         "app_mentions:read",
         "canvases:read",
-        "canvases:write",
-        "search:read"
+        "canvases:write"
       ],
-      "user": [
-        "search:read"
-      ]
+      "user": []
     }
   },
   "settings": {

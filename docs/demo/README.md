@@ -10,7 +10,7 @@ Place captured screenshots here for the README and Devpost submission.
 - 🔴 CRITICAL severity badge (dynamic, not hardcoded)
 - Reagent name: TSH
 - Stock: 680 u.
-- Projected stockout: ~3 días
+- Projected stockout: ~4 días
 - 3 Block Kit action buttons: "📊 Ver proyección", "🛒 Ordenar reactivo", "👤 Asignar al equipo"
 - ⚠️ DEMO badge
 
@@ -34,7 +34,7 @@ Place captured screenshots here for the README and Devpost submission.
 ### 04_agent.png
 **When to capture:** After typing `@LabOps Agent TSH` in a channel.
 **Must show:**
-- Agent response with inventory summary and forecast (~197 u/día, ~3 days coverage)
+- Agent response with inventory summary and forecast (~197 u/día, ~4 days coverage)
 - 3 action buttons below the agent text (Ver proyección, Ordenar reactivo, Asignar al equipo)
 - ⚠️ DEMO badge
 

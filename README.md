@@ -333,7 +333,7 @@ Inventory Canvas updates in real time after an order is confirmed.
 
 **Verified numbers from live deploy:**
 - TSH demand: ~197 u/día (hábil), ~138 u/día (fin de semana)
-- Stockout projection: ~3 días con 680 u stock
+- Stockout projection: ~4 días con 680 u stock
 - Forecast chart: renders from `https://labops-agent.onrender.com/chart/forecast/TSH`
 - Canvas: persists via `lab_config` table in Supabase
 
