@@ -114,7 +114,7 @@ Tools available:
 
 ## Try it Live
 
-> **Demo video (≤3 min):** `demo/video/LabOps_Agent_Demo_Complete.mp4` — to be uploaded to YouTube (Unlisted) for Devpost submission.
+> **Demo video (≤3 min):** [Watch on YouTube](https://youtu.be/VrSa1m-TICw) — full demo with voiceover narration.
 > **Live deploy:** `https://labops-agent.onrender.com` (Render persistent host — Socket Mode + FastAPI co-hosted)
 > **Sandbox workspace:** `https://labopsespacio.slack.com` (invite-only sandbox).
 
@@ -311,7 +311,7 @@ None — this project uses **Slack platform APIs** (Channel History API, Canvas 
 
 ## Demo Screenshots
 
-Extracted from the final demo video (`demo/video/LabOps_Agent_Demo_Complete.mp4`).
+Extracted from the final demo video ([YouTube](https://youtu.be/VrSa1m-TICw)).
 
 ### Block Kit Alert
 ![TSH Critical Alert](docs/demo/01_alert.png)
