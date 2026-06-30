@@ -40,10 +40,12 @@ No existing product (Quartzy, Scispot, Benchling) combines:
 | **Slack Channel History API** | Queries #labops-alerts message history for past reagent incidents (works with the bot token) | Slack |
 | **Claude API Summarization** | Generates natural language summaries of reagent alert history | Anthropic |
 
-> **Optional add-on (not part of the headline tech):** the **Slack Search API**
-> (`search.messages`) surfaces cross-channel mentions, but it requires a workspace
-> **user token** (`xoxp-`) — the bot token returns empty results. It is wired up
-> and degrades gracefully when absent; set `SLACK_USER_TOKEN` to enable it.
+> **Design decision note:** `search.messages` (Slack Search API) was evaluated
+> but replaced by `conversations_replies` (Channel History API) for thread history
+> retrieval. `search.messages` requires a workspace **user token** (`xoxp-`) which
+> is not available in standard bot-token deployments; the bot token returns empty
+> results. Thread-scoped history via `conversations_replies` provides the relevant
+> alert context without requiring a user token.
 
 ---
 
@@ -165,7 +167,7 @@ cp .env.example .env
 # Fill in your keys:
 # SUPABASE_URL, SUPABASE_KEY
 # SLACK_BOT_TOKEN, SLACK_APP_TOKEN, SLACK_SIGNING_SECRET
-# SLACK_USER_TOKEN (optional — required for search.messages)
+# SLACK_USER_TOKEN (optional — only for Slack Search API, not used in current implementation)
 # ANTHROPIC_API_KEY
 # LABOPS_ALERTS_CHANNEL=#labops-alerts
 ```

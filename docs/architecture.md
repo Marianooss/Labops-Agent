@@ -115,28 +115,27 @@ Query method: client.conversations_history(channel_id) filtered by reagent name
 Returns: past alerts, orders placed, resolutions
 ```
 
-### 3. Slack Search API (Real-Time Search) — *optional enhancement*
+### 3. Thread History via Channel History API — *implemented*
 > The three technologies that work out-of-the-box with the bot token are the
-> **MCP Server**, the **Channel History API**, and **Claude API summarization**.
-> `search.messages` below is an *optional* add-on: it needs a workspace user
-> token, so it is not part of the headline tech and degrades gracefully when
-> absent. Enable it only if a `SLACK_USER_TOKEN` is provided.
+> **MCP Server**, the **Channel History API** (`conversations_replies`), and
+> **Claude API summarization**.
 
-**What it does:** Searches the entire workspace in real time for reagent mentions using Slack's `search.messages` API.
+**What it does:** Retrieves recent replies from the current alert thread to surface prior context for the specific stockout discussion.
 
-When a user clicks "📊 Ver proyección", the agent runs a real-time search for the reagent across all accessible channels (not just `#labops-alerts`). This surfaces relevant conversations, past alerts, and team discussions that may not be in the immediate channel history.
+When a user clicks "📊 Ver proyección", the agent calls `conversations_replies` on the current thread, filters messages mentioning the target reagent and containing alert keywords (🔴 CRÍTICO, 🟡 ADVERTENCIA, 📊 Pronóstico), and returns up to 3 matching messages as thread history.
 
 ```
-Scopes used: search:read (bot) + search:read (user token required for search.messages)
-Query method: client.search_messages(query="TSH in:labops-alerts", count=5)
-Returns: cross-channel matches with timestamps and snippets
+Scopes used: channels:history, groups:history (bot token xoxb-)
+Query method: client.conversations_replies(channel=channel, ts=thread_ts, limit=10)
+Filter: reagent name match + alert keyword match
+Returns: thread-scoped prior alerts with timestamps and snippets
 ```
 
-> ⚠️ **Limitation:** `search.messages` requires a **user token** (`xoxp-`) to return results.
-> The bot token (`search:read` bot scope) receives empty results in standard workspaces.
-> The app includes graceful fallback messaging when search is unavailable.
-> For full search functionality, a workspace admin must generate a user token
-> and set `SLACK_USER_TOKEN` in the environment.
+> ⚠️ **Design decision:** `search.messages` (Slack Search API) was evaluated but
+> replaced by `conversations_replies` because `search.messages` requires a **user
+> token** (`xoxp-`) that is not available in the standard bot-token deployment.
+> The bot token (`search:read` bot scope) receives empty results. Thread-scoped
+> history provides the relevant context without requiring a user token.
 
 ### 4. Claude API Summarization
 **What it does:** Uses Claude API to summarize `#labops-alerts` channel history on demand.
