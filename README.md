@@ -190,7 +190,7 @@ cp .env.example .env
 6. Go to **OAuth & Permissions** → **Install to Workspace**
 7. Copy the **Bot User OAuth Token** and **App-Level Token** into your `.env`
 
-Manifest includes all required scopes: `chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`, `im:write`, `users:read`, `app_mentions:read`, `canvases:read`, `canvases:write`, `search:read`.
+Manifest includes all required scopes: `chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`, `im:write`, `users:read`, `app_mentions:read`, `canvases:read`, `canvases:write`.
 
 ### 5. One-Click Docker Setup (recommended for judges)
 
@@ -297,7 +297,7 @@ labops-agent/
 ├── render.yaml           # Render Blueprint (persistent host + Socket Mode)
 ├── docker-compose.yml    # One-click local stack
 ├── Dockerfile            # Backend container
-├── Makefile              # make demo / make local / make test
+├── LICENSE               # MIT License
 ├── AGENTS.md             # Development operating system
 ├── BIBLE.md              # Immutable declarations
 └── CLAUDE.md             # Claude Code instructions

@@ -105,14 +105,14 @@ Tools exposed:
 **Why MCP:** Keeps the agent's data access declarative and auditable. Each tool call is logged and the agent can reason about which tool to use for which task.
 
 ### 2. Channel History API
-**What it does:** Queries `#labops-alerts` message history for past reagent incidents.
+**What it does:** Retrieves thread-scoped message history for contextual alert discussion.
 
-When a user asks "what happened with TSH last month?", the agent uses Slack's `conversations.history` API to fetch past messages about TSH from `#labops-alerts` — without storing any data externally. This gives the agent contextual memory within Slack's own infrastructure.
+When a user clicks "📊 Ver proyección" on an alert, the agent uses Slack's `conversations_replies` API to fetch prior messages in the current thread about the target reagent — without storing any data externally. This gives the agent contextual memory within Slack's own infrastructure.
 
 ```
 Scopes used: channels:history, groups:history
-Query method: client.conversations_history(channel_id) filtered by reagent name
-Returns: past alerts, orders placed, resolutions
+Query method: client.conversations_replies(channel=channel, ts=thread_ts, limit=10) filtered by reagent name + alert keywords
+Returns: past alerts, orders placed, resolutions from the current thread
 ```
 
 ### 3. Thread History via Channel History API — *implemented*

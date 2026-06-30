@@ -26,9 +26,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))  # Load .env from project root
 
+import claude_client as claude
 import database as db
 import prediction
-import claude_client as claude
 import mcp_server as mcp
 import blocks_loader as bl
 import agent_router
@@ -392,15 +392,11 @@ def handle_view_forecast(ack, body, client):
                          or "📊 Pronóstico" in m.get("text", ""))
                 ][:3]
                 if alert_msgs:
-                    lines = []
-                    for msg in alert_msgs:
-                        ts = msg.get("ts", "")
-                        date = ts.split(".")[0] if ts else "N/A"
-                        snippet = msg.get("text", "")[:80]
-                        lines.append(f"• `{date}` — {snippet}...")
+                    msg_texts = [m.get("text", "") for m in alert_msgs]
+                    summary = claude.summarize_messages(msg_texts, reagent)
                     thread_history_text = (
                         f"*📜 {len(alert_msgs)} alerta(s) previa(s) de `{reagent}` en este hilo:*\n"
-                        + "\n".join(lines)
+                        f"{summary}"
                     )
                 else:
                     thread_history_text = f"*✅ Sin alertas previas de `{reagent}` en este hilo.*"

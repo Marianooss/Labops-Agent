@@ -31,6 +31,9 @@
     "interactivity": {
       "is_enabled": true
     },
+    "event_subscriptions": {
+      "bot_events": ["app_mention", "app_home_opened"]
+    },
     "org_deploy_enabled": false,
     "socket_mode_enabled": true,
     "token_rotation_enabled": false
