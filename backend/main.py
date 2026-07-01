@@ -113,7 +113,7 @@ def api_trigger_alert(
         reagent,
         proj["projected_stockout_days"],
         stock,
-        seasonality_hint="TSH demand spikes in winter (Jun-Aug) in Argentina",
+        seasonality_hint="TSH demand in Argentine clinical labs peaks in autumn (March-May), driven by increased thyroid screening requests during the transition from summer to colder months. Real peak/trough ratio is 2.50x based on 414,289 B2B derivation records (Labmedicina 2025-2026)."
     )
 
     db.log_alert(reagent, proj["projected_stockout_date"], proj["severity"], explanation)
