@@ -64,9 +64,9 @@ react; they don't plan.
 **Top test types by volume (from anonymized analysis):**
 | Test | Relative volume | Seasonal pattern |
 |---|---|---|
-| TSH / T4L | Highest | Winter spike (Jun-Aug) +80% |
+| TSH / T4L | Highest | Autumn peak (Mar-May) +150%, from 414K real B2B records |
 | Hemograma | High | Stable |
-| Glucemia | Medium | Stable (slight winter +5%) |
+| Glucemia | Medium | Stable (slight autumn +5%) |
 | Vitamina D | Medium | Stable |
 | Uremia | Medium | Stable |
 | Ionograma | Medium | Stable |

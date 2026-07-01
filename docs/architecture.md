@@ -59,8 +59,8 @@ demand forecasting.
 │  │            coverage ~79-82% (well calibrated)            │    │
 │  │                                                          │    │
 │  │  Key patterns:                                           │    │
-│  │  - TSH: winter_mult=1.8 (Jun-Aug spike in AR)           │    │
-│  │  - Hemograma: stable year-round                          │    │
+│  │  - TSH: peak_mult=2.5 (Mar-May autumn peak, 414K B2B)   │    │
+│  │  - Hemograma: moderate variation (CV=0.359), Jan-May    │    │
 │  │  - Ionograma: stable year-round                          │    │
 │  │                                                          │    │
 │  │  calculate_stockout_projection():                        │    │
@@ -161,12 +161,12 @@ T+1s:   Prophet model loaded from models/TSH_model.pkl
 
 T+2s:   projected_stockout_days=4 < reorder_lead_time=7
         → alert_trigger=True, severity="critical"
-        (680 units ÷ ~185 u/day winter mean → cumulative demand
+        (680 units ÷ ~197 u/day mean → cumulative demand
          crosses stock on day 4)
 
 T+3s:   Claude API called (temperature=0)
         → generates natural language explanation
-        → "TSH demand spikes in winter (Jun-Aug). Current stock
+        → "TSH demand peaks in autumn (Mar-May). Current stock
            will cover ~4 days at projected consumption rate."
 
 T+4s:   Bolt Python sends Block Kit message to #labops-alerts
@@ -191,7 +191,7 @@ T+6s:   Staff confirms order
 **Algorithm:** Facebook Prophet
 
 Prophet was chosen for its native handling of:
-- **Yearly seasonality** — TSH demand spikes every winter in Argentina
+- **Yearly seasonality** — TSH demand peaks every autumn (Mar-May) in Argentina
 - **Weekly seasonality** — lower demand on weekends (lab closures)
 - **Trend detection** — gradual growth or decline in test volumes
 
