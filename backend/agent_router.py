@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 import claude_client as claude
 import mcp_server as mcp
+import prediction
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,20 @@ def _execute_tool(name: str, arguments: dict) -> str:
     try:
         if name == "get_inventory":
             result = mcp.get_inventory(arguments.get("reagent_name"))
+            # Inject authoritative stockout projection so Claude doesn't compute its own
+            if result.get("reagent_name") and result.get("current_stock") is not None:
+                try:
+                    proj = prediction.calculate_stockout_projection(
+                        result["reagent_name"],
+                        float(result["current_stock"]),
+                        reorder_lead_time=7,
+                    )
+                    result["projected_stockout_days"] = proj["projected_stockout_days"]
+                    result["severity"] = proj["severity"]
+                    result["alert_trigger"] = proj["alert_trigger"]
+                    result["reorder_lead_time"] = proj["reorder_lead_time"]
+                except Exception:
+                    pass  # leave result unchanged if projection fails
             return json.dumps(result, ensure_ascii=False, default=str)
 
         elif name == "get_forecast":
@@ -166,7 +181,9 @@ def run_agent(
         "create reagent orders, and update inventory canvases. "
         "Respond in the same language the user writes in (usually Spanish). "
         "Be concise, specific, and action-oriented. "
-        "When creating orders, always confirm the details in your response."
+        "When creating orders, always confirm the details in your response. "
+        "When inventory data includes projected_stockout_days, always report that exact number. "
+        "Do not calculate your own estimate from stock and forecast data."
     )
 
     messages: list = [{"role": "user", "content": user_message}]
