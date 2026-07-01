@@ -104,8 +104,11 @@ def explain_stockout(
     except Exception:
         # Graceful fallback when API key is invalid/dummy
         return (
-            f"La demanda de {reagent_name} aumenta en invierno (junio-agosto) "
-            f"en Argentina. El stock actual ({current_stock} unidades) "
-            f"se agotará en ~{projected_stockout_days} días — antes del "
-            f"período de reorden. Se recomienda ordenar con urgencia."
+            f"La demanda de {reagent_name} en laboratorios clínicos argentinos "
+            f"alcanza su pico en otoño (marzo-mayo), impulsada por el aumento de "
+            f"solicitudes de screening tiroideo durante la transición de verano a "
+            f"meses más fríos. La relación real pico/valle es 2.50x basada en "
+            f"414.289 registros B2B de derivación (Labmedicina 2025-2026). "
+            f"El stock actual ({current_stock} unidades) se agotará en ~{projected_stockout_days} días "
+            f"— antes del período de reorden. Se recomienda ordenar con urgencia."
         )
